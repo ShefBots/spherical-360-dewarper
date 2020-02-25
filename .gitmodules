@@ -1,0 +1,3 @@
+[submodule "blayzeTechUtils"]
+	path = blayzeTechUtils
+	url = git@github.com:Blayzeing/blayzeTechUtils.git
