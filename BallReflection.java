@@ -1,7 +1,7 @@
-import classes.env.*;
-import classes.math.*;
-import classes.env.nonpolyshapes.*;
-import classes.graphics.SimpleDisplay;
+import blayzeTechUtils.env.*;
+import blayzeTechUtils.math.*;
+import blayzeTechUtils.env.nonpolyshapes.*;
+import blayzeTechUtils.graphics.SimpleDisplay;
 import java.awt.Color;
 import java.awt.Graphics2D;
 
@@ -110,7 +110,7 @@ public class BallReflection {
 		ReflectionRegressor.camCircle.setY(ReflectionRegressor.camCircle.getY()+300);
 		ReflectionRegressor.drawEnvironment();
 
-		for(double i = -70; i<90; i+= 1)
+		for(double i = -70; i<90; i+= 3)
 		{
 			ReflectionRegressor rr = new ReflectionRegressor(i);
 			rr.regressAngle();
