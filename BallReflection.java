@@ -16,26 +16,35 @@ public class BallReflection {
 		public static final int STEPS = 10;
 		public static final double STEP_DOWNSCALE = 0.4;
 
-		public static double ballRadius = 100;
 		public static double cameraDistance = 300;
 		public static NVector offset = new NVector(new double[]{100,100});
 		
 		// Store the environment:
 		public static Environment env = new Environment();
-		public static CircleBoundedEntity camCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1) + cameraDistance, 4);
+		public static CircleBoundedEntity camCircle;
 		public static CircleBoundedEntity reflectorCircle;
+
+		private static double angularStep;
 
 
 		private NVector targetSlope;
 		private Hit rayHit = new Hit(false, camCircle.getX(), camCircle.getY());
 		private NVector reflectedRay = new NVector(new double[]{0,0});
 
-		private double angularStep = Math.asin(ballRadius/cameraDistance)/STEPS;
-
 		static{
 			// Man look at this strange static-class programming.
-			env.entities.add(new CircleBoundedEntity(offset.getElement(0), offset.getElement(1), ballRadius));
+			// preconfig with arbitary positions:
+			camCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1) + cameraDistance, 4);
+			reflectorCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1), 100);
+			setCameraDistance(300);
+			env.entities.add(reflectorCircle);
 			env.entities.add(camCircle);
+		}
+		public static void setCameraDistance(double distance)
+		{
+			camCircle.setY(reflectorCircle.getY() + distance);
+			angularStep = Math.asin(reflectorCircle.getRadius()/(camCircle.getY()-reflectorCircle.getY()))/STEPS;
+			angularStep = 0.01;
 		}
 		public static void drawEnvironment()
 		{
@@ -89,7 +98,11 @@ public class BallReflection {
 					continue;
 				}
 				double yError = reflectedRay.getElement(1) - targetSlope.getElement(1);
-				//System.out.println("y error: " + yError);
+				double xError = reflectedRay.getElement(0) - targetSlope.getElement(0);
+				//double error = targetSlope.crossProduct(reflectedRay);//xError + yError;
+				double error = reflectedRay.getElement(0)*targetSlope.getElement(1) - reflectedRay.getElement(1)*reflectedRay.getElement(0);
+				System.out.println("y error: " + yError);
+				System.out.println("error: " + error);
 				int errorSign = (int)Math.signum(yError); // Really, we only care about the vertical error.
 				if(errorSign != lastSign)
 				{
@@ -107,15 +120,18 @@ public class BallReflection {
 	public static void main(String[] args) throws InterruptedException
 	{
 		// ReflectionRegressor.cameraDistance is not needed! (Plus probably ball radius, but you can create a static function that changes that object - maybe make the object private?)
-		ReflectionRegressor.camCircle.setY(ReflectionRegressor.camCircle.getY()+300);
+		ReflectionRegressor.setCameraDistance(300);
 		ReflectionRegressor.drawEnvironment();
 
-		for(double i = -70; i<90; i+= 3)
-		{
-			ReflectionRegressor rr = new ReflectionRegressor(i);
-			rr.regressAngle();
-			rr.drawLines();
-		}
+		ReflectionRegressor rr = new ReflectionRegressor(89);
+		rr.regressAngle();
+		rr.drawLines();
+		//for(double i = -70; i<90; i+= 3)
+		//{
+		//	ReflectionRegressor rr = new ReflectionRegressor(i);
+		//	rr.regressAngle();
+		//	rr.drawLines();
+		//}
 	}
 	public static Point toPoint(NVector v)
 	{
