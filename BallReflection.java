@@ -4,6 +4,8 @@ import blayzeTechUtils.env.nonpolyshapes.*;
 import blayzeTechUtils.graphics.SimpleDisplay;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import javax.swing.*;
+import java.awt.event.*;
 
 
 public class BallReflection {
@@ -16,15 +18,14 @@ public class BallReflection {
 		public static final int STEPS = 10;
 		public static final double STEP_DOWNSCALE = 0.4;
 
-		public static double cameraDistance = 300;
+		public static final Double DEFAULT_CAMERA_DISTANCE = 300.0;
+		public static final Double DEFAULT_REFLECTOR_RADIUS = 100.0;
 		public static NVector offset = new NVector(new double[]{100,100});
 		
 		// Store the environment:
 		public static Environment env = new Environment();
 		public static CircleBoundedEntity camCircle;
 		public static CircleBoundedEntity reflectorCircle;
-
-		private static double angularStep;
 
 
 		private NVector targetSlope;
@@ -34,20 +35,24 @@ public class BallReflection {
 		static{
 			// Man look at this strange static-class programming.
 			// preconfig with arbitary positions:
-			camCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1) + cameraDistance, 4);
-			reflectorCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1), 100);
+			camCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1) + DEFAULT_CAMERA_DISTANCE, 4);
+			reflectorCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1), DEFAULT_REFLECTOR_RADIUS);
 			setCameraDistance(300);
 			env.entities.add(reflectorCircle);
 			env.entities.add(camCircle);
 		}
 		public static void setCameraDistance(double distance)
 		{
-			camCircle.setY(reflectorCircle.getY() + distance);
-			angularStep = Math.asin(reflectorCircle.getRadius()/(camCircle.getY()-reflectorCircle.getY()))/STEPS;
-			angularStep = 0.01;
+			camCircle.setY(reflectorCircle.getY() + Math.max(0,distance));
+		}
+		public static double getCameraDistance()
+		{
+			return(Math.abs(camCircle.getY() - reflectorCircle.getY()));
 		}
 		public static void drawEnvironment()
 		{
+			d.fill(new Color(210,210,210));// TODO: Put colours somewhere else
+			d.drawGrid((int)fromMm(10), new Color(180,180,180));
 			g.setColor(Color.BLACK);
 			env.draw(g);
 			d.repaint();
@@ -75,6 +80,8 @@ public class BallReflection {
 		public double regressAngle()
 		{
 			NVector cameraV = new NVector(new double[]{camCircle.getX(), camCircle.getY()});
+			double maximumRange = Math.asin(reflectorCircle.getRadius()/(camCircle.getY()-reflectorCircle.getY()));
+			double angularStep = maximumRange/STEPS;
 
 			int iterations = 0;
 			double angle = 0.0;
@@ -97,13 +104,15 @@ public class BallReflection {
 					angularStep *= STEP_DOWNSCALE;
 					continue;
 				}
+				// TODO: Actually use the correct heuristic.
 				double yError = reflectedRay.getElement(1) - targetSlope.getElement(1);
 				double xError = reflectedRay.getElement(0) - targetSlope.getElement(0);
 				//double error = targetSlope.crossProduct(reflectedRay);//xError + yError;
-				double error = reflectedRay.getElement(0)*targetSlope.getElement(1) - reflectedRay.getElement(1)*reflectedRay.getElement(0);
-				System.out.println("y error: " + yError);
-				System.out.println("error: " + error);
-				int errorSign = (int)Math.signum(yError); // Really, we only care about the vertical error.
+				//double error = reflectedRay.getElement(1)*targetSlope.getElement(0) - reflectedRay.getElement(0)*reflectedRay.getElement(1);
+				double error = yError;
+				//System.out.println("y error: " + yError);
+				//System.out.println("error: " + error);
+				int errorSign = (int)Math.signum(error); // Really, we only care about the vertical error.
 				if(errorSign != lastSign)
 				{
 					angularStep *= -STEP_DOWNSCALE; // Flip direction and scale down the step
@@ -121,17 +130,51 @@ public class BallReflection {
 	{
 		// ReflectionRegressor.cameraDistance is not needed! (Plus probably ball radius, but you can create a static function that changes that object - maybe make the object private?)
 		ReflectionRegressor.setCameraDistance(300);
-		ReflectionRegressor.drawEnvironment();
 
-		ReflectionRegressor rr = new ReflectionRegressor(89);
-		rr.regressAngle();
-		rr.drawLines();
-		//for(double i = -70; i<90; i+= 3)
-		//{
-		//	ReflectionRegressor rr = new ReflectionRegressor(i);
-		//	rr.regressAngle();
-		//	rr.drawLines();
-		//}
+		// Shove all the UI stuff in here:
+		JFrame configFrame = new JFrame();
+		JPanel configPanel = new JPanel();
+		configPanel.setLayout(new BoxLayout(configPanel, BoxLayout.Y_AXIS));
+
+		// Add the camera distance UI:
+		configPanel.add(new JLabel("Camera Distance (mm):"));
+		JTextField cameraDistanceSelector = new JTextField(ReflectionRegressor.DEFAULT_CAMERA_DISTANCE.toString());
+		cameraDistanceSelector.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				ReflectionRegressor.setCameraDistance(Double.parseDouble(cameraDistanceSelector.getText()));
+				computeAndRenderVisualiser();
+			}
+		});
+		configPanel.add(cameraDistanceSelector);
+		
+		// Add the reflector radius UI:
+		configPanel.add(new JLabel("Reflector Radius (mm):"));
+		JTextField reflectorRadiusSelector = new JTextField(ReflectionRegressor.DEFAULT_REFLECTOR_RADIUS.toString());
+		reflectorRadiusSelector.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				ReflectionRegressor.reflectorCircle.setRadius(Math.max(0,Double.parseDouble(reflectorRadiusSelector.getText())));
+				computeAndRenderVisualiser();
+			}
+		});
+		configPanel.add(reflectorRadiusSelector);
+
+		configFrame.add(configPanel);
+		configFrame.pack();
+		configFrame.setLocationRelativeTo(null);
+		configFrame.setVisible(true);
+
+		computeAndRenderVisualiser();
+	}
+	public static void computeAndRenderVisualiser()
+	{
+		ReflectionRegressor.drawEnvironment();
+		if(ReflectionRegressor.getCameraDistance() > ReflectionRegressor.reflectorCircle.getRadius())
+			for(double i = 0; i<85; i+= 3)
+			{
+				ReflectionRegressor rr = new ReflectionRegressor(i);
+				rr.regressAngle();
+				rr.drawLines();
+			}
 	}
 	public static Point toPoint(NVector v)
 	{
@@ -140,5 +183,13 @@ public class BallReflection {
 	public static NVector toNVector(StaticPoint p)
 	{
 		return new NVector(new double[]{p.getX(), p.getY()});
+	}
+	public static double fromMm(double Mm)
+	{
+		return (Mm*10);// TODO: Remove magic numbers
+	}
+	public static double toMm(double d)
+	{
+		return (d/10.0);
 	}
 }
