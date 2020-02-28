@@ -6,9 +6,12 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import javax.swing.*;
 import java.awt.event.*;
+import java.awt.GridLayout;
 
 
 public class BallReflection {
+
+  public static final double SCALE_MULT = 10;
 
 	public static class ReflectionRegressor {
 		public static SimpleDisplay d = new SimpleDisplay(400,600, "Reflection Regressor", true, true);
@@ -18,8 +21,8 @@ public class BallReflection {
 		public static final int STEPS = 10;
 		public static final double STEP_DOWNSCALE = 0.4;
 
-		public static final Double DEFAULT_CAMERA_DISTANCE = 300.0;
-		public static final Double DEFAULT_REFLECTOR_RADIUS = 100.0;
+		public static final Double DEFAULT_CAMERA_DISTANCE = 30.0;
+		public static final Double DEFAULT_REFLECTOR_RADIUS = 10.0;
 		public static NVector offset = new NVector(new double[]{100,100});
 		
 		// Store the environment:
@@ -36,13 +39,14 @@ public class BallReflection {
 			// Man look at this strange static-class programming.
 			// preconfig with arbitary positions:
 			camCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1) + DEFAULT_CAMERA_DISTANCE, 4);
-			reflectorCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1), DEFAULT_REFLECTOR_RADIUS);
-			setCameraDistance(300);
+			reflectorCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1), DEFAULT_REFLECTOR_RADIUS * SCALE_MULT);
+			setCameraDistance(DEFAULT_CAMERA_DISTANCE);
 			env.entities.add(reflectorCircle);
 			env.entities.add(camCircle);
 		}
 		public static void setCameraDistance(double distance)
 		{
+      distance *= SCALE_MULT;
 			camCircle.setY(reflectorCircle.getY() + Math.max(0,distance));
 		}
 		public static double getCameraDistance()
@@ -126,10 +130,15 @@ public class BallReflection {
 		}
 	}
 
+  public static Integer horizontalResolution = 550;
+  public static Integer verticalResolution = 400;
+  public static Double vertAngleStart = 0.0;
+  public static Double vertAngleEnd = 60.0;
+
 	public static void main(String[] args) throws InterruptedException
 	{
 		// ReflectionRegressor.cameraDistance is not needed! (Plus probably ball radius, but you can create a static function that changes that object - maybe make the object private?)
-		ReflectionRegressor.setCameraDistance(300);
+		ReflectionRegressor.setCameraDistance(30);
 
 		// Shove all the UI stuff in here:
 		JFrame configFrame = new JFrame();
@@ -152,11 +161,53 @@ public class BallReflection {
 		JTextField reflectorRadiusSelector = new JTextField(ReflectionRegressor.DEFAULT_REFLECTOR_RADIUS.toString());
 		reflectorRadiusSelector.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				ReflectionRegressor.reflectorCircle.setRadius(Math.max(0,Double.parseDouble(reflectorRadiusSelector.getText())));
+				ReflectionRegressor.reflectorCircle.setRadius(SCALE_MULT * Math.max(0,Double.parseDouble(reflectorRadiusSelector.getText())));
 				computeAndRenderVisualiser();
 			}
 		});
 		configPanel.add(reflectorRadiusSelector);
+
+    // Add the angle UI:
+    configPanel.add(new JLabel("View angle (start, end):"));
+    JPanel anglePanel = new JPanel(new GridLayout(1,2));
+    JTextField startAngleSelector = new JTextField(vertAngleStart.toString());
+    JTextField endAngleSelector = new JTextField(vertAngleEnd.toString());
+    startAngleSelector.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        vertAngleStart = Double.parseDouble(startAngleSelector.getText());
+        computeAndRenderVisualiser();
+      }
+    });
+    endAngleSelector.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        vertAngleEnd = Math.min(88.48, Math.max(0, Double.parseDouble(endAngleSelector.getText())));
+        computeAndRenderVisualiser();
+      }
+    });
+    anglePanel.add(startAngleSelector);
+    anglePanel.add(endAngleSelector);
+    configPanel.add(anglePanel);
+
+    // Add the resolution UI:
+    configPanel.add(new JLabel("Output image resultion (pixels, WxH):"));
+    JPanel resPanel = new JPanel(new GridLayout(1,2));
+    JTextField hozResolutionSelector = new JTextField(horizontalResolution.toString());
+    JTextField vertResolutionSelector = new JTextField(verticalResolution.toString());
+    hozResolutionSelector.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        horizontalResolution = Math.max(0, Integer.parseInt(hozResolutionSelector.getText()));
+        computeAndRenderVisualiser();
+      }
+    });
+    vertResolutionSelector.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        verticalResolution = Math.max(0, Integer.parseInt(vertResolutionSelector.getText()));
+        computeAndRenderVisualiser();
+      }
+    });
+    resPanel.add(hozResolutionSelector);
+    resPanel.add(vertResolutionSelector);
+    configPanel.add(resPanel);
 
 		configFrame.add(configPanel);
 		configFrame.pack();
@@ -169,12 +220,15 @@ public class BallReflection {
 	{
 		ReflectionRegressor.drawEnvironment();
 		if(ReflectionRegressor.getCameraDistance() > ReflectionRegressor.reflectorCircle.getRadius())
-			for(double i = 0; i<85; i+= 3)
+    {
+      double scale = (vertAngleEnd - vertAngleStart)/(verticalResolution+1.0);// Plus one to get each point to be in the center
+			for(double i = 0; i<verticalResolution; i++)
 			{
-				ReflectionRegressor rr = new ReflectionRegressor(i);
+				ReflectionRegressor rr = new ReflectionRegressor(vertAngleStart + i*scale);
 				rr.regressAngle();
 				rr.drawLines();
 			}
+    }
 	}
 	public static Point toPoint(NVector v)
 	{
@@ -186,10 +240,10 @@ public class BallReflection {
 	}
 	public static double fromMm(double Mm)
 	{
-		return (Mm*10);// TODO: Remove magic numbers
+		return (Mm*SCALE_MULT);// TODO: Remove magic numbers
 	}
 	public static double toMm(double d)
 	{
-		return (d/10.0);
+		return (d/SCALE_MULT);
 	}
 }
