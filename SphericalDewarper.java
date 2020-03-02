@@ -7,6 +7,11 @@ import java.awt.Graphics2D;
 import javax.swing.*;
 import java.awt.event.*;
 import java.awt.GridLayout;
+import java.awt.Dimension;
+import java.io.File;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 
 
 public class SphericalDewarper {
@@ -18,39 +23,39 @@ public class SphericalDewarper {
 
   public static SampleImageConfigurator sampleImageDisplay = new SampleImageConfigurator();
 
-	public static void main(String[] args) throws InterruptedException
-	{
-		// ReflectionRegressor.cameraDistance is not needed! (Plus probably ball radius, but you can create a static function that changes that object - maybe make the object private?)
-		ReflectionRegressor.setCameraDistance(30);
+  public static void main(String[] args) throws InterruptedException
+  {
+    // ReflectionRegressor.cameraDistance is not needed! (Plus probably ball radius, but you can create a static function that changes that object - maybe make the object private?)
+    ReflectionRegressor.setCameraDistance(30);
 
-		//// CONFIG UI
-		JFrame configFrame = new JFrame();
-		configFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    //// CONFIG UI
+    JFrame configFrame = new JFrame();
+    configFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     configFrame.setTitle("Config");
-		JPanel configPanel = new JPanel();
-		configPanel.setLayout(new BoxLayout(configPanel, BoxLayout.Y_AXIS));
+    JPanel configPanel = new JPanel();
+    configPanel.setLayout(new BoxLayout(configPanel, BoxLayout.Y_AXIS));
 
-		// Add the camera distance UI:
-		configPanel.add(new JLabel("Camera Distance (mm):"));
-		JTextField cameraDistanceSelector = new JTextField(ReflectionRegressor.DEFAULT_CAMERA_DISTANCE.toString());
-		cameraDistanceSelector.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				ReflectionRegressor.setCameraDistance(Double.parseDouble(cameraDistanceSelector.getText()));
-				computeAndRenderVisualiser();
-			}
-		});
-		configPanel.add(cameraDistanceSelector);
-		
-		// Add the reflector radius UI:
-		configPanel.add(new JLabel("Reflector Radius (mm):"));
-		JTextField reflectorRadiusSelector = new JTextField(ReflectionRegressor.DEFAULT_REFLECTOR_RADIUS.toString());
-		reflectorRadiusSelector.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				ReflectionRegressor.reflectorCircle.setRadius(ReflectionRegressor.SCALE_MULT * Math.max(0,Double.parseDouble(reflectorRadiusSelector.getText())));
-				computeAndRenderVisualiser();
-			}
-		});
-		configPanel.add(reflectorRadiusSelector);
+    // Add the camera distance UI:
+    configPanel.add(new JLabel("Camera Distance (mm):"));
+    JTextField cameraDistanceSelector = new JTextField(ReflectionRegressor.DEFAULT_CAMERA_DISTANCE.toString());
+    cameraDistanceSelector.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        ReflectionRegressor.setCameraDistance(Double.parseDouble(cameraDistanceSelector.getText()));
+        computeAndRenderVisualiser();
+      }
+    });
+    configPanel.add(cameraDistanceSelector);
+    
+    // Add the reflector radius UI:
+    configPanel.add(new JLabel("Reflector Radius (mm):"));
+    JTextField reflectorRadiusSelector = new JTextField(ReflectionRegressor.DEFAULT_REFLECTOR_RADIUS.toString());
+    reflectorRadiusSelector.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        ReflectionRegressor.reflectorCircle.setRadius(ReflectionRegressor.SCALE_MULT * Math.max(0,Double.parseDouble(reflectorRadiusSelector.getText())));
+        computeAndRenderVisualiser();
+      }
+    });
+    configPanel.add(reflectorRadiusSelector);
 
     // Add the angle UI:
     configPanel.add(new JLabel("View angle (start, end):"));
@@ -94,37 +99,61 @@ public class SphericalDewarper {
     resPanel.add(vertResolutionSelector);
     configPanel.add(resPanel);
 
-		configFrame.add(configPanel);
-		configFrame.pack();
-		configFrame.setLocationRelativeTo(null);
-		configFrame.setVisible(true);
+    // Add the file loader UI:
+    final JFileChooser fileChooser = new JFileChooser();
+    //fileChooser.addChoosableFileFilter(new ImageFilter());// TODO: Could filter the file selector to only be images.
+    JButton loadFileBtn = new JButton("Load Sample Image");
+    loadFileBtn.setSize(new Dimension(resPanel.getSize().width, loadFileBtn.getSize().height));
+    loadFileBtn.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        int fileChooserReturn = fileChooser.showOpenDialog(configPanel);
+        if(fileChooserReturn == JFileChooser.APPROVE_OPTION)
+        {
+          File imgFile = fileChooser.getSelectedFile();
+          System.out.println("Opening file " + imgFile + "...");
+          BufferedImage img = null;
+          try {
+                img = ImageIO.read(imgFile);
+                sampleImageDisplay.setImage(img);
+          } catch (IOException ex) {
+            System.out.println("Warning: Unable to read and load file. Please try another.\n\t" + ex);
+          }
+        }
+      }
+    });
+    configPanel.add(loadFileBtn);
 
-    //// LOADED IMAGE UI
-    
 
-		computeAndRenderVisualiser();
-	}
+    configFrame.add(configPanel);
+    configFrame.pack();
+    configFrame.setLocationRelativeTo(null);
+    configFrame.setVisible(true);
 
-	public static void computeAndRenderVisualiser()
-	{
-		ReflectionRegressor.drawEnvironment();
-		if(ReflectionRegressor.getCameraDistance() > ReflectionRegressor.reflectorCircle.getRadius())
+
+    // Render the initial run of the visualiser
+    computeAndRenderVisualiser();
+  }
+
+  public static void computeAndRenderVisualiser()
+  {
+    ReflectionRegressor.drawEnvironment();
+    if(ReflectionRegressor.getCameraDistance() > ReflectionRegressor.reflectorCircle.getRadius())
     {
       double scale = (vertAngleEnd - vertAngleStart)/(verticalResolution+1.0);// Plus one to get each point to be in the center
-			for(double i = 0; i<verticalResolution; i++)
-			{
-				ReflectionRegressor rr = new ReflectionRegressor(vertAngleStart + i*scale);
-				rr.regressAngle();
-				rr.drawLines();
-			}
+      for(double i = 0; i<verticalResolution; i++)
+      {
+        ReflectionRegressor rr = new ReflectionRegressor(vertAngleStart + i*scale);
+        rr.regressAngle();
+        rr.drawLines();
+      }
     }
-	}
-	public static Point toPoint(NVector v)
-	{
-		return new Point(v.getElement(0), v.getElement(1));
-	}
-	public static NVector toNVector(StaticPoint p)
-	{
-		return new NVector(new double[]{p.getX(), p.getY()});
-	}
+  }
+  public static Point toPoint(NVector v)
+  {
+    return new Point(v.getElement(0), v.getElement(1));
+  }
+  public static NVector toNVector(StaticPoint p)
+  {
+    return new NVector(new double[]{p.getX(), p.getY()});
+  }
 }
