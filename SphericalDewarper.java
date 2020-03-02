@@ -16,6 +16,8 @@ public class SphericalDewarper {
   public static Double vertAngleStart = 0.0;
   public static Double vertAngleEnd = 60.0;
 
+  public static SampleImageConfigurator sampleImageDisplay = new SampleImageConfigurator();
+
 	public static void main(String[] args) throws InterruptedException
 	{
 		// ReflectionRegressor.cameraDistance is not needed! (Plus probably ball radius, but you can create a static function that changes that object - maybe make the object private?)
