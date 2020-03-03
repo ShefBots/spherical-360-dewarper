@@ -7,11 +7,17 @@ import javax.swing.*;
 import blayzeTechUtils.env.TPolygonEntity;
 import blayzeTechUtils.math.Point;
 
-public class SampleImageConfigurator extends JFrame{
+// Listeners
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+
+public class SampleImageConfigurator extends JFrame implements ActionListener {
 
   private static class ImageContainer extends JPanel{
     private int width, height;
-    private TPolygonEntity reticule;
+    public TPolygonEntity reticule;
 
     public BufferedImage image = null;
 
@@ -43,25 +49,97 @@ public class SampleImageConfigurator extends JFrame{
     }
   }
 
+  private static enum ControlButtonType {
+    UP, DOWN, LEFT, RIGHT, UPSCALE, DOWNSCALE, CLOCKWISE_ROTATE, COUNTERCLOCKWISE_ROTATE;
+
+    private static final String[] stringValues = new String[]{"^","v","<",">","*","/","CW","CCW"};
+    @Override
+    public String toString()
+    {
+      switch(this)
+      {
+        case UP: return(stringValues[0]);
+        case DOWN: return(stringValues[1]);
+        case LEFT: return(stringValues[2]);
+        case RIGHT: return(stringValues[3]);
+        case UPSCALE: return(stringValues[4]);
+        case DOWNSCALE: return(stringValues[5]);
+        case CLOCKWISE_ROTATE: return(stringValues[6]);
+        case COUNTERCLOCKWISE_ROTATE: return(stringValues[7]);
+        default: break;
+      }
+      return super.toString();
+    }
+
+    public static ControlButtonType fromString(String s)
+    {
+      for(ControlButtonType bt : ControlButtonType.values())
+        if(s.equals(bt.toString()))
+          return bt;
+      return null;
+    }
+  }
+
   private JScrollPane scrollPane;
   private ImageContainer imageContainer;
+  private double reticuleSpeed = 1, reticuleScaleRate = 1;
   
   public SampleImageConfigurator(){
+    // Setup
     super();
-
     this.setLayout(new BorderLayout());
     setTitle("Sample Image Configurator");
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 
+    // Sample Image Display
     imageContainer = new ImageContainer(1280, 720);
-
     scrollPane = new JScrollPane(imageContainer);
     this.add(scrollPane, BorderLayout.CENTER);
 
+    // The control buttons:
+    JPanel controlBtns = new JPanel();
+    for(ControlButtonType t : ControlButtonType.values())
+    {
+      JButton btn = new JButton(t.toString());
+      btn.addActionListener(this);
+      controlBtns.add(btn);
+    }
+    this.add(controlBtns, BorderLayout.SOUTH);
+
+    // Prepare top-level UI
     pack();
     setResizable(true);
     setVisible(true);
     setLocationRelativeTo(null);
+  }
+  public void actionPerformed(ActionEvent e)
+  {
+    switch(ControlButtonType.fromString(e.getActionCommand()))
+    {
+      case UP:
+        imageContainer.reticule.setY(imageContainer.reticule.getY() - reticuleSpeed);
+      break;
+      case DOWN:
+        imageContainer.reticule.setY(imageContainer.reticule.getY() + reticuleSpeed);
+      break;
+      case LEFT:
+        imageContainer.reticule.setX(imageContainer.reticule.getX() - reticuleSpeed);
+      break;
+      case RIGHT:
+        imageContainer.reticule.setX(imageContainer.reticule.getX() + reticuleSpeed);
+      break;
+      case UPSCALE:
+        imageContainer.reticule.setXscale(imageContainer.reticule.getXscale() + reticuleScaleRate);
+        imageContainer.reticule.setYscale(imageContainer.reticule.getYscale() + reticuleScaleRate);
+      break;
+      case DOWNSCALE:
+        imageContainer.reticule.setXscale(imageContainer.reticule.getXscale() - reticuleScaleRate);
+        imageContainer.reticule.setYscale(imageContainer.reticule.getYscale() - reticuleScaleRate);
+      break;
+      default:
+      break;
+    }
+    imageContainer.repaint();
   }
 
   public void setImage(BufferedImage img)
