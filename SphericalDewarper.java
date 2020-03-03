@@ -22,6 +22,7 @@ public class SphericalDewarper {
   public static Double vertAngleEnd = 60.0;
 
   public static SampleImageConfigurator sampleImageDisplay = new SampleImageConfigurator();
+  public static SampleOutputDisplay sampleOutput = new SampleOutputDisplay();
 
   public static void main(String[] args) throws InterruptedException
   {

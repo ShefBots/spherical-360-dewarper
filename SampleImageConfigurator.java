@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.BorderLayout;
 import javax.swing.*;
 import blayzeTechUtils.env.TPolygonEntity;
+import blayzeTechUtils.env.TPPolygonEntity;
 import blayzeTechUtils.math.Point;
 
 // Listeners
@@ -18,6 +19,7 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
   private static class ImageContainer extends JPanel{
     private int width, height;
     public TPolygonEntity reticule;
+    private TPPolygonEntity subReticule;
 
     public BufferedImage image = null;
 
@@ -29,7 +31,7 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
       this.setPreferredSize(new Dimension(w, h));
 
       // Draw the reticule
-      int reticuleResolution = 10;// Maybe this should be the hoz. resolution of the output?
+      int reticuleResolution = 100;// Maybe this should be the hoz. resolution of the output?
       Point[] reticulePoints = new Point[reticuleResolution +1];
       for(int i = 0; i<reticuleResolution; i++)
       {
@@ -40,12 +42,24 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
       reticule = new TPolygonEntity(0,0,reticulePoints);
       reticule.setXscale(100);
       reticule.setYscale(100);
+
+      // Draw the subreticule
+      Point[] subretPoints = new Point[6];
+      subretPoints[0] = new Point(0, -0.5);
+      subretPoints[1] = new Point(0, 0.5);
+      subretPoints[2] = new Point(0, 0);
+      subretPoints[3] = new Point(-0.5, 0);
+      subretPoints[4] = new Point(0.5, 0);
+      subretPoints[5] = new Point(0, 0);
+      subReticule = new TPPolygonEntity(0,0,subretPoints, reticule);
     }
     public void paintComponent(Graphics g)
     {
       super.paintComponent(g);
+      g.setColor(Color.ORANGE);
       ((Graphics2D)g).drawImage(image,0,0,getWidth(),getHeight(), null);
       reticule.draw((Graphics2D)g);
+      subReticule.draw((Graphics2D)g);
     }
   }
 
@@ -82,7 +96,8 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
 
   private JScrollPane scrollPane;
   private ImageContainer imageContainer;
-  private double reticuleSpeed = 1, reticuleScaleRate = 1;
+  private static Double reticuleScaleRate = 1.0, reticuleRotateRate = 1.0/180 * Math.PI;
+  private JTextField moveSpeedSelector, scaleSelector, rotationSelector; // Contain the actual information here (A little sloppy, bit will work)
   
   public SampleImageConfigurator(){
     // Setup
@@ -96,7 +111,7 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
     scrollPane = new JScrollPane(imageContainer);
     this.add(scrollPane, BorderLayout.CENTER);
 
-    // The control buttons:
+    //// The control buttons:
     JPanel controlBtns = new JPanel();
     for(ControlButtonType t : ControlButtonType.values())
     {
@@ -104,6 +119,23 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
       btn.addActionListener(this);
       controlBtns.add(btn);
     }
+    // The control text fields:
+    controlBtns.add(new JLabel("Move Speed:"));
+    moveSpeedSelector = new JTextField("1");
+    int newSize = (int)(moveSpeedSelector.getPreferredSize().width*5);
+    moveSpeedSelector.setPreferredSize(new Dimension(newSize, moveSpeedSelector.getPreferredSize().height));
+    controlBtns.add(moveSpeedSelector);
+    controlBtns.add(new JLabel("Radius:"));
+    scaleSelector = new JTextField("100");
+    scaleSelector.setPreferredSize(new Dimension(newSize, scaleSelector.getPreferredSize().height));
+    scaleSelector.addActionListener(this);
+    controlBtns.add(scaleSelector);
+    controlBtns.add(new JLabel("Rotation (degrees):"));
+    rotationSelector = new JTextField("0");
+    rotationSelector.setPreferredSize(new Dimension(newSize, rotationSelector.getPreferredSize().height));
+    rotationSelector.addActionListener(this);
+    controlBtns.add(rotationSelector);
+
     this.add(controlBtns, BorderLayout.SOUTH);
 
     // Prepare top-level UI
@@ -112,33 +144,52 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
     setVisible(true);
     setLocationRelativeTo(null);
   }
+  private void rerender()
+  {
+    imageContainer.reticule.setScale(Double.valueOf(scaleSelector.getText()));
+    imageContainer.reticule.setRotation(Double.valueOf(rotationSelector.getText())/180 * Math.PI);
+  }
   public void actionPerformed(ActionEvent e)
   {
-    switch(ControlButtonType.fromString(e.getActionCommand()))
-    {
-      case UP:
-        imageContainer.reticule.setY(imageContainer.reticule.getY() - reticuleSpeed);
-      break;
-      case DOWN:
-        imageContainer.reticule.setY(imageContainer.reticule.getY() + reticuleSpeed);
-      break;
-      case LEFT:
-        imageContainer.reticule.setX(imageContainer.reticule.getX() - reticuleSpeed);
-      break;
-      case RIGHT:
-        imageContainer.reticule.setX(imageContainer.reticule.getX() + reticuleSpeed);
-      break;
-      case UPSCALE:
-        imageContainer.reticule.setXscale(imageContainer.reticule.getXscale() + reticuleScaleRate);
-        imageContainer.reticule.setYscale(imageContainer.reticule.getYscale() + reticuleScaleRate);
-      break;
-      case DOWNSCALE:
-        imageContainer.reticule.setXscale(imageContainer.reticule.getXscale() - reticuleScaleRate);
-        imageContainer.reticule.setYscale(imageContainer.reticule.getYscale() - reticuleScaleRate);
-      break;
-      default:
-      break;
+    rerender();
+    try{
+      switch(ControlButtonType.fromString(e.getActionCommand()))
+      {
+        case UP:
+          imageContainer.reticule.setY(imageContainer.reticule.getY() - Double.valueOf(moveSpeedSelector.getText()));
+        break;
+        case DOWN:
+          imageContainer.reticule.setY(imageContainer.reticule.getY() + Double.valueOf(moveSpeedSelector.getText()));
+        break;
+        case LEFT:
+          imageContainer.reticule.setX(imageContainer.reticule.getX() - Double.valueOf(moveSpeedSelector.getText()));
+        break;
+        case RIGHT:
+          imageContainer.reticule.setX(imageContainer.reticule.getX() + Double.valueOf(moveSpeedSelector.getText()));
+        break;
+        case UPSCALE:
+          imageContainer.reticule.setScale(imageContainer.reticule.getXscale() + reticuleScaleRate);
+          scaleSelector.setText(Double.toString(imageContainer.reticule.getXscale()));
+        break;
+        case DOWNSCALE:
+          imageContainer.reticule.setScale(imageContainer.reticule.getXscale() - reticuleScaleRate);
+          scaleSelector.setText(Double.toString(imageContainer.reticule.getXscale()));
+        break;
+        case COUNTERCLOCKWISE_ROTATE:
+          imageContainer.reticule.setRotation(imageContainer.reticule.getRotation() - reticuleRotateRate);
+          rotationSelector.setText(Double.toString(imageContainer.reticule.getRotation()/Math.PI*180));
+        break;
+        case CLOCKWISE_ROTATE:
+          imageContainer.reticule.setRotation(imageContainer.reticule.getRotation() + reticuleRotateRate);
+          rotationSelector.setText(Double.toString(imageContainer.reticule.getRotation()/Math.PI*180));
+        break;
+        default:
+        break;
+      }
+    }catch(Exception ex){
+      // This happens if we don't parse a regular command, but instead a string from one of the parameter options.
     }
+
     imageContainer.repaint();
   }
 
