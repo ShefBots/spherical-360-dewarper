@@ -16,7 +16,7 @@ import java.awt.event.KeyListener;
 
 public class SampleImageConfigurator extends JFrame implements ActionListener {
 
-  private static class ImageContainer extends JPanel{
+  public static class ImageContainer extends JPanel{
     private int width, height;
     public TPolygonEntity reticule;
     private TPPolygonEntity subReticule;
@@ -39,7 +39,7 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
         reticulePoints[i] = new Point(Math.cos(angle)*0.5, Math.sin(angle)*0.5);
       }
       reticulePoints[reticuleResolution] = new Point(0.25,0);
-      reticule = new TPolygonEntity(0,0,reticulePoints);
+      reticule = new TPolygonEntity(w/2.0,h/2.0,reticulePoints);
       reticule.setXscale(100);
       reticule.setYscale(100);
 
@@ -95,7 +95,7 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
   }
 
   private JScrollPane scrollPane;
-  private ImageContainer imageContainer;
+  public ImageContainer imageContainer;
   private static Double reticuleScaleRate = 1.0, reticuleRotateRate = 1.0/180 * Math.PI;
   private JTextField moveSpeedSelector, scaleSelector, rotationSelector; // Contain the actual information here (A little sloppy, bit will work)
   
@@ -104,7 +104,7 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
     super();
     this.setLayout(new BorderLayout());
     setTitle("Sample Image Configurator");
-		setDefaultCloseOperation(EXIT_ON_CLOSE);
+    setDefaultCloseOperation(EXIT_ON_CLOSE);
 
     // Sample Image Display
     imageContainer = new ImageContainer(1280, 720);
@@ -137,6 +137,9 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
     controlBtns.add(rotationSelector);
 
     this.add(controlBtns, BorderLayout.SOUTH);
+    
+    // The Instructions
+    this.add(new JLabel("Align reticule with location of top reflective ray hits"), BorderLayout.NORTH);
 
     // Prepare top-level UI
     pack();
@@ -197,11 +200,27 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
   {
     imageContainer.image = img;
     imageContainer.setPreferredSize(new Dimension(img.getWidth(), img.getHeight()));
+    imageContainer.reticule.setX(img.getWidth()/2.0);
+    imageContainer.reticule.setY(img.getHeight()/2.0);
     renderImage();
   }
   private void renderImage()
   {
     // Draw the image
     imageContainer.repaint();
+  }
+
+  /**
+   * Returns the projected coordinate `angle` way around the reticule and `distanceFromCenter` from the center.
+   *
+   * @param	angle	the angle around the reticule this is (0-1)
+   * @param	distanceFromCenter	the distance from the center (0-1)
+   */
+  public Point getCoordinateAt(double angle, double distanceFromCenter)
+  {
+	double trueDistance = distanceFromCenter*0.5;// Downscale to match the reticule
+	double trueAngle = angle*Math.PI*2;// Scale to be in full 360 deg range.
+	Point point = new Point(Math.cos(trueAngle)*trueDistance, Math.sin(trueAngle)*trueDistance);
+	return(imageContainer.reticule.projectToWorld(point));
   }
 }

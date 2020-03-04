@@ -28,6 +28,7 @@ public class ReflectionRegressor {
   private NVector targetSlope;
   private Hit rayHit = new Hit(false, camCircle.getX(), camCircle.getY());
   private NVector reflectedRay = new NVector(new double[]{0,0});
+  public double angle = 0;// Gets set by the regressor (stored here in case it gets needed somewhere else)
 
   static{
     // Man look at this strange static-class programming.
@@ -120,6 +121,7 @@ public class ReflectionRegressor {
       iterations++;
     }while(iterations < MAX_ITERATIONS);
     
+    this.angle = angle;
     return angle;
   }
 }

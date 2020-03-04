@@ -22,7 +22,7 @@ public class SphericalDewarper {
   public static Double vertAngleEnd = 60.0;
 
   public static SampleImageConfigurator sampleImageDisplay = new SampleImageConfigurator();
-  public static SampleOutputDisplay sampleOutput = new SampleOutputDisplay();
+  public static SampleOutputDisplay sampleOutput = new SampleOutputDisplay(horizontalResolution, verticalResolution);
 
   public static void main(String[] args) throws InterruptedException
   {
@@ -140,21 +140,42 @@ public class SphericalDewarper {
     ReflectionRegressor.drawEnvironment();
     if(ReflectionRegressor.getCameraDistance() > ReflectionRegressor.reflectorCircle.getRadius())
     {
+      // Calculate the angles
+      double[] angle = new double[verticalResolution];// Stores the angle from horizontal at each vertical step
       double scale = (vertAngleEnd - vertAngleStart)/(verticalResolution+1.0);// Plus one to get each point to be in the center
-      for(double i = 0; i<verticalResolution; i++)
+      for(int i = 0; i<verticalResolution; i++)
       {
         ReflectionRegressor rr = new ReflectionRegressor(vertAngleStart + i*scale);
-        rr.regressAngle();
+        angle[i] = rr.regressAngle();
         rr.drawLines();
       }
+      
+      ////Use the calculated angles to sample the input image and draw to the output image
+      // Calculate lookup table
+      int[][][] lookupTable = new int[horizontalResolution][verticalResolution][2];// Store a map of coordinates to new coordinates
+      for(int x = 0; x<horizontalResolution; x++)
+      {
+        for(int y = 0; y<verticalResolution; y++)
+        {
+          Point coordinate = sampleImageDisplay.getCoordinateAt(x/(double)horizontalResolution, angle[y]/angle[0]);
+          lookupTable[x][y][0] = (int)coordinate.getX();
+          lookupTable[x][y][1] = (int)coordinate.getY();
+        }
+      }
+
+      // Use lookup table to draw dewarped image
+      // TODO: Probably shouldn't reference the images like this, instead should make getters and setters (and put the subclasses and ImageContainer instances back to being private)
+      if (sampleImageDisplay.imageContainer.image != null)
+        for(int x = 0; x<horizontalResolution; x++)
+        {
+          for(int y = 0; y<verticalResolution; y++)
+          {
+            //System.out.println("(" + x + ", " + y + ")  -  (" + lookupTable[x][y][0] + ", " + lookupTable[x][y][1] + ")");
+            sampleOutput.imageContainer.image.setRGB(x, y, sampleImageDisplay.imageContainer.image.getRGB(lookupTable[x][y][0], lookupTable[x][y][1]));
+          }
+        }
+      sampleOutput.imageContainer.repaint();
     }
-  }
-  public static Point toPoint(NVector v)
-  {
-    return new Point(v.getElement(0), v.getElement(1));
-  }
-  public static NVector toNVector(StaticPoint p)
-  {
-    return new NVector(new double[]{p.getX(), p.getY()});
+
   }
 }
