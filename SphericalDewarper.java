@@ -87,12 +87,14 @@ public class SphericalDewarper {
     hozResolutionSelector.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         horizontalResolution = Math.max(0, Integer.parseInt(hozResolutionSelector.getText()));
+        sampleOutput.setNewImage(horizontalResolution, verticalResolution);
         computeAndRenderVisualiser();
       }
     });
     vertResolutionSelector.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         verticalResolution = Math.max(0, Integer.parseInt(vertResolutionSelector.getText()));
+        sampleOutput.setNewImage(horizontalResolution, verticalResolution);
         computeAndRenderVisualiser();
       }
     });
@@ -116,6 +118,7 @@ public class SphericalDewarper {
           try {
                 img = ImageIO.read(imgFile);
                 sampleImageDisplay.setImage(img);
+                computeAndRenderVisualiser();
           } catch (IOException ex) {
             System.out.println("Warning: Unable to read and load file. Please try another.\n\t" + ex);
           }

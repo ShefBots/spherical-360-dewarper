@@ -16,16 +16,19 @@ public class SampleOutputDisplay extends JFrame {
     public ImageContainer (int w, int h)
     {
       super();
-      this.width = w;
-      this.height = h;
-      this.setPreferredSize(new Dimension(w, h));
-
-      image = new BufferedImage(w,h, BufferedImage.TYPE_INT_ARGB);
+      setNewImage(w,h);
     }
     public void paintComponent(Graphics g)
     {
       super.paintComponent(g);
       ((Graphics2D)g).drawImage(image,0,0,getWidth(), getHeight(), null);
+    }
+    public void setNewImage(int width, int height)
+    {
+      this.width = width;
+      this.height = height;
+      image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+      this.setPreferredSize(new Dimension(width, height));
     }
   }
 
@@ -47,5 +50,10 @@ public class SampleOutputDisplay extends JFrame {
     setResizable(true);
     setVisible(true);
     setLocationRelativeTo(null);
+  }
+  public void setNewImage(int width, int height)
+  {
+    imageContainer.setNewImage(width, height);
+    pack();
   }
 }

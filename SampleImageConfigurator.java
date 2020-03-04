@@ -194,6 +194,7 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
     }
 
     imageContainer.repaint();
+    SphericalDewarper.computeAndRenderVisualiser();
   }
 
   public void setImage(BufferedImage img)
