@@ -96,7 +96,6 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
 
   private JScrollPane scrollPane;
   public ImageContainer imageContainer;
-  private static Double reticuleScaleRate = 1.0, reticuleRotateRate = 1.0/180 * Math.PI;
   private JTextField moveSpeedSelector, scaleSelector, rotationSelector; // Contain the actual information here (A little sloppy, bit will work)
   
   public SampleImageConfigurator(){
@@ -156,34 +155,35 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
   {
     rerender();
     try{
+      double alterSpeed = Double.valueOf(moveSpeedSelector.getText());
       switch(ControlButtonType.fromString(e.getActionCommand()))
       {
         case UP:
-          imageContainer.reticule.setY(imageContainer.reticule.getY() - Double.valueOf(moveSpeedSelector.getText()));
+          imageContainer.reticule.setY(imageContainer.reticule.getY() - alterSpeed);
         break;
         case DOWN:
-          imageContainer.reticule.setY(imageContainer.reticule.getY() + Double.valueOf(moveSpeedSelector.getText()));
+          imageContainer.reticule.setY(imageContainer.reticule.getY() + alterSpeed);
         break;
         case LEFT:
-          imageContainer.reticule.setX(imageContainer.reticule.getX() - Double.valueOf(moveSpeedSelector.getText()));
+          imageContainer.reticule.setX(imageContainer.reticule.getX() - alterSpeed);
         break;
         case RIGHT:
-          imageContainer.reticule.setX(imageContainer.reticule.getX() + Double.valueOf(moveSpeedSelector.getText()));
+          imageContainer.reticule.setX(imageContainer.reticule.getX() + alterSpeed);
         break;
         case UPSCALE:
-          imageContainer.reticule.setScale(imageContainer.reticule.getXscale() + reticuleScaleRate);
+          imageContainer.reticule.setScale(imageContainer.reticule.getXscale() + alterSpeed);
           scaleSelector.setText(Double.toString(imageContainer.reticule.getXscale()));
         break;
         case DOWNSCALE:
-          imageContainer.reticule.setScale(imageContainer.reticule.getXscale() - reticuleScaleRate);
+          imageContainer.reticule.setScale(imageContainer.reticule.getXscale() - alterSpeed);
           scaleSelector.setText(Double.toString(imageContainer.reticule.getXscale()));
         break;
         case COUNTERCLOCKWISE_ROTATE:
-          imageContainer.reticule.setRotation(imageContainer.reticule.getRotation() - reticuleRotateRate);
+          imageContainer.reticule.setRotation(imageContainer.reticule.getRotation() - alterSpeed/180*Math.PI);
           rotationSelector.setText(Double.toString(imageContainer.reticule.getRotation()/Math.PI*180));
         break;
         case CLOCKWISE_ROTATE:
-          imageContainer.reticule.setRotation(imageContainer.reticule.getRotation() + reticuleRotateRate);
+          imageContainer.reticule.setRotation(imageContainer.reticule.getRotation() + alterSpeed/180*Math.PI);
           rotationSelector.setText(Double.toString(imageContainer.reticule.getRotation()/Math.PI*180));
         break;
         default:

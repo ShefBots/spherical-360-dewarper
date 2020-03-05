@@ -63,10 +63,17 @@ public class ReflectionRegressor {
   }
   public void drawLines()
   {
+    drawLines(Color.RED, true);
+  }
+  public void drawLines(Color c, boolean drawCamRay)
+  {
     NVector mirrorDisp = reflectedRay.scale(100);
-    g.setColor(Color.ORANGE);
-    g.drawLine((int)camCircle.getX(), (int)camCircle.getY(), (int)rayHit.getX(), (int)rayHit.getY());
-    g.setColor(Color.RED);
+    if(drawCamRay)
+    {
+      g.setColor(Color.ORANGE);
+      g.drawLine((int)camCircle.getX(), (int)camCircle.getY(), (int)rayHit.getX(), (int)rayHit.getY());
+    }
+    g.setColor(c);
     g.drawLine((int)rayHit.getX(), (int)rayHit.getY(), (int)(rayHit.getX()+mirrorDisp.getElement(0)), (int)(rayHit.getY()+mirrorDisp.getElement(1)));
     d.repaint();
   }

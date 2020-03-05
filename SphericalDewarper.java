@@ -12,6 +12,8 @@ import java.io.File;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 
 
 public class SphericalDewarper {
@@ -23,6 +25,10 @@ public class SphericalDewarper {
 
   public static SampleImageConfigurator sampleImageDisplay = new SampleImageConfigurator();
   public static SampleOutputDisplay sampleOutput = new SampleOutputDisplay(horizontalResolution, verticalResolution);
+
+  public static double[] perPixelAngles; // Stores the angle from horizontal at each vertical step
+  public static int[][][] perPixelLookupTable; // Stores a map of each coordinate to a new coordinate (in the form [width][height][x,y])
+  //public static int[][][][] perPixelSpreadLookupTable; // Stores a collection of coordinates for each pixel in the output from that in the input (in the form [width][height][xs][ys]) TODO.
 
   public static void main(String[] args) throws InterruptedException
   {
@@ -108,6 +114,7 @@ public class SphericalDewarper {
     JButton loadFileBtn = new JButton("Load Sample Image");
     loadFileBtn.setSize(new Dimension(resPanel.getSize().width, loadFileBtn.getSize().height));
     loadFileBtn.addActionListener(new ActionListener() {
+      @Override
       public void actionPerformed(ActionEvent e) {
         int fileChooserReturn = fileChooser.showOpenDialog(configPanel);
         if(fileChooserReturn == JFileChooser.APPROVE_OPTION)
@@ -127,42 +134,97 @@ public class SphericalDewarper {
     });
     configPanel.add(loadFileBtn);
 
+    // Add the save UI:
+    configPanel.add(new JLabel("Save format and file name:"));
+    JComboBox saveFormatComboBox = new JComboBox(new String[]{"Python", "Java"});
+    JTextField saveFilename = new JTextField("output");
+    JButton saveButton = new JButton("Save");
+    saveButton.addActionListener(new ActionListener() {
+      @Override
+      public void actionPerformed(ActionEvent e) {
+        // Find the line ending
+        String fileEnding = saveFormatComboBox.getSelectedItem().toString();
+        System.out.println(fileEnding);
+        if(fileEnding.equals("Python"))
+          fileEnding = "py";
+        else if(fileEnding.equals("Java"))
+          fileEnding = "java";
+
+        // Actually write the file
+        String filename = saveFilename.getText() + "." + fileEnding;
+        System.out.print("Saving to " + filename + "... ");
+        try(PrintWriter file = new PrintWriter(filename))
+        {
+          file.println(generateSaveCode(fileEnding));
+        System.out.println("Saved!");
+        }catch(FileNotFoundException ex){
+          System.out.println("ERROR: File not found for saving - " + ex);
+        }
+      }
+    });
+    configPanel.add(saveFormatComboBox);
+    configPanel.add(saveFilename);
+    configPanel.add(saveButton);
 
     configFrame.add(configPanel);
     configFrame.pack();
     configFrame.setLocationRelativeTo(null);
     configFrame.setVisible(true);
 
-
     // Render the initial run of the visualiser
     computeAndRenderVisualiser();
   }
 
+  /**
+   * Calculates sample bounds for the `perPixelSpreadLookupTable` variable.
+   * Note: Incomplete. TODO.
+   */
+  public static void computeSampleBounds()
+  {
+    // Calculate the angles
+    double[] pixelBoundaryAngles = new double[verticalResolution+1];// Stores the angles of each vertical pixel boundary
+    double scale = (vertAngleEnd - vertAngleStart)/(verticalResolution);
+    for(int i = 0; i<verticalResolution+1; i++)
+    {
+      ReflectionRegressor rr = new ReflectionRegressor(vertAngleStart + i*scale);
+      pixelBoundaryAngles[i] = rr.regressAngle();
+    }
+
+    // Calculate pixel spread lookup table
+  }
   public static void computeAndRenderVisualiser()
   {
     ReflectionRegressor.drawEnvironment();
     if(ReflectionRegressor.getCameraDistance() > ReflectionRegressor.reflectorCircle.getRadius())
     {
       // Calculate the angles
-      double[] angle = new double[verticalResolution];// Stores the angle from horizontal at each vertical step
-      double scale = (vertAngleEnd - vertAngleStart)/(verticalResolution+1.0);// Plus one to get each point to be in the center
+      perPixelAngles = new double[verticalResolution];// Stores the angle from horizontal at each vertical step
+      double scale = (vertAngleEnd - vertAngleStart)/(verticalResolution);
       for(int i = 0; i<verticalResolution; i++)
       {
-        ReflectionRegressor rr = new ReflectionRegressor(vertAngleStart + i*scale);
-        angle[i] = rr.regressAngle();
+        ReflectionRegressor rr = new ReflectionRegressor(vertAngleStart + scale/2 + i*scale);
+        perPixelAngles[i] = rr.regressAngle();
         rr.drawLines();
       }
+
+      // Also draw the start and end angles
+      ReflectionRegressor rr = new ReflectionRegressor(vertAngleStart);
+      rr.regressAngle();
+      rr.drawLines(Color.BLACK, false);
+      rr = new ReflectionRegressor(vertAngleEnd);
+      rr.regressAngle();
+      rr.drawLines(Color.BLACK, false);
       
       ////Use the calculated angles to sample the input image and draw to the output image
       // Calculate lookup table
-      int[][][] lookupTable = new int[horizontalResolution][verticalResolution][2];// Store a map of coordinates to new coordinates
+      perPixelLookupTable = new int[horizontalResolution][verticalResolution][2];// Store a map of coordinates to new coordinates
       for(int x = 0; x<horizontalResolution; x++)
       {
         for(int y = 0; y<verticalResolution; y++)
         {
-          Point coordinate = sampleImageDisplay.getCoordinateAt(x/(double)horizontalResolution, angle[y]/angle[0]);
-          lookupTable[x][y][0] = (int)coordinate.getX();
-          lookupTable[x][y][1] = (int)coordinate.getY();
+          Point coordinate = sampleImageDisplay.getCoordinateAt(x/(double)horizontalResolution, perPixelAngles[y]/perPixelAngles[0]);
+          perPixelLookupTable[x][y][0] = (int)coordinate.getX();
+          perPixelLookupTable[x][y][1] = (int)coordinate.getY();
         }
       }
 
@@ -173,12 +235,42 @@ public class SphericalDewarper {
         {
           for(int y = 0; y<verticalResolution; y++)
           {
-            //System.out.println("(" + x + ", " + y + ")  -  (" + lookupTable[x][y][0] + ", " + lookupTable[x][y][1] + ")");
-            sampleOutput.imageContainer.image.setRGB(x, y, sampleImageDisplay.imageContainer.image.getRGB(lookupTable[x][y][0], lookupTable[x][y][1]));
+            //System.out.println("(" + x + ", " + y + ")  -  (" + perPixelLookupTable[x][y][0] + ", " + perPixelLookupTable[x][y][1] + ")");
+            sampleOutput.imageContainer.image.setRGB(x, y, sampleImageDisplay.imageContainer.image.getRGB(perPixelLookupTable[x][y][0], perPixelLookupTable[x][y][1]));
           }
         }
       sampleOutput.imageContainer.repaint();
     }
+  }
 
+  /**
+   * Generates the save code for the file.
+   */
+  public static String generateSaveCode(String filetype)
+  {
+    if(filetype.equals("py"))
+      return generatePythonSaveCode();
+    if(filetype.equals("java"))
+      return generateJavaSaveCode();
+    return("Error - somehow you've specified a nonexistant save type.");
+  }
+  public static String generatePythonSaveCode()
+  {
+    String out = "dict = {}\ndict['angles'] = np.asarray[";
+    for(int i = 0; i<perPixelAngles.length; i++)
+    {
+      ////// ERROR: THIS IS STORING THE WRONG ANGLE. IT NEEDS TO BE THE OUTPUT ANGLE, NOT THE CAMERA ANGLE.
+      double angle = perPixelAngles[i]/Math.PI*180;
+      if(i != perPixelAngles.length-1)
+        out = out + angle + ","; //String.format("%d,", perPixelAngles[i]);
+      else
+        out = out + angle; //String.format("%d", perPixelAngles[i]);
+    }
+    out += "], dtype=np.float64)\ndict['lookup-table'] = np.asarray[";
+    return out;
+  }
+  public static String generateJavaSaveCode()
+  {
+    return "This is not implemented yet.";
   }
 }
