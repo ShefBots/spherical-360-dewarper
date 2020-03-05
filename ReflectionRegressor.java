@@ -23,12 +23,14 @@ public class ReflectionRegressor {
   public static Environment env = new Environment();
   public static CircleBoundedEntity camCircle;
   public static CircleBoundedEntity reflectorCircle;
+  public static NVector DOWN = new NVector(new double[]{0,1});
 
 
   private NVector targetSlope;
   private Hit rayHit = new Hit(false, camCircle.getX(), camCircle.getY());
   private NVector reflectedRay = new NVector(new double[]{0,0});
-  public double angle = 0;// Gets set by the regressor (stored here in case it gets needed somewhere else)
+  public double angle = 0;// Gets camera angle set by the regressor (stored here in case it gets needed somewhere else)
+  public double outputRayAngleFromDown = 0; // Stores the angle from the down vector to the output ray
 
   static{
     // Man look at this strange static-class programming.
@@ -129,6 +131,7 @@ public class ReflectionRegressor {
     }while(iterations < MAX_ITERATIONS);
     
     this.angle = angle;
+    this.outputRayAngleFromDown = Math.acos(reflectedRay.dot(DOWN));
     return angle;
   }
 }

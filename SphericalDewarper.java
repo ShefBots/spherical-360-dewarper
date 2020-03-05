@@ -139,12 +139,13 @@ public class SphericalDewarper {
     JComboBox saveFormatComboBox = new JComboBox(new String[]{"Python", "Java"});
     JTextField saveFilename = new JTextField("output");
     JButton saveButton = new JButton("Save");
+    JLabel saveState = new JLabel("");
+    JPanel savePanel = new JPanel(new GridLayout(1,2));
     saveButton.addActionListener(new ActionListener() {
       @Override
       public void actionPerformed(ActionEvent e) {
         // Find the line ending
         String fileEnding = saveFormatComboBox.getSelectedItem().toString();
-        System.out.println(fileEnding);
         if(fileEnding.equals("Python"))
           fileEnding = "py";
         else if(fileEnding.equals("Java"))
@@ -153,18 +154,24 @@ public class SphericalDewarper {
         // Actually write the file
         String filename = saveFilename.getText() + "." + fileEnding;
         System.out.print("Saving to " + filename + "... ");
+        saveState.setText("Saving...");
+        saveState.repaint();
         try(PrintWriter file = new PrintWriter(filename))
         {
           file.println(generateSaveCode(fileEnding));
-        System.out.println("Saved!");
+          System.out.println("Saved!");
+          saveState.setText("Saved!");
         }catch(FileNotFoundException ex){
           System.out.println("ERROR: File not found for saving - " + ex);
+          saveState.setText("Error!");
         }
       }
     });
     configPanel.add(saveFormatComboBox);
     configPanel.add(saveFilename);
-    configPanel.add(saveButton);
+    savePanel.add(saveButton);
+    savePanel.add(saveState);
+    configPanel.add(savePanel);
 
     configFrame.add(configPanel);
     configFrame.pack();
@@ -198,12 +205,14 @@ public class SphericalDewarper {
     if(ReflectionRegressor.getCameraDistance() > ReflectionRegressor.reflectorCircle.getRadius())
     {
       // Calculate the angles
-      perPixelAngles = new double[verticalResolution];// Stores the angle from horizontal at each vertical step
+      double angles[] = new double[verticalResolution];// Stores the angle from vertical around the camera for each step
+      perPixelAngles = new double[verticalResolution];// Stores the angle from the vertical around the reflector for use in export.
       double scale = (vertAngleEnd - vertAngleStart)/(verticalResolution);
       for(int i = 0; i<verticalResolution; i++)
       {
         ReflectionRegressor rr = new ReflectionRegressor(vertAngleStart + scale/2 + i*scale);
-        perPixelAngles[i] = rr.regressAngle();
+        angles[i] = rr.regressAngle();
+        perPixelAngles[i] = rr.outputRayAngleFromDown;
         rr.drawLines();
       }
 
@@ -256,17 +265,35 @@ public class SphericalDewarper {
   }
   public static String generatePythonSaveCode()
   {
-    String out = "dict = {}\ndict['angles'] = np.asarray[";
+    String out = "dict = {}\ndict['angles-degrees'] = np.asarray([";
     for(int i = 0; i<perPixelAngles.length; i++)
     {
-      ////// ERROR: THIS IS STORING THE WRONG ANGLE. IT NEEDS TO BE THE OUTPUT ANGLE, NOT THE CAMERA ANGLE.
       double angle = perPixelAngles[i]/Math.PI*180;
       if(i != perPixelAngles.length-1)
-        out = out + angle + ","; //String.format("%d,", perPixelAngles[i]);
+        out = out + angle + ",";
       else
-        out = out + angle; //String.format("%d", perPixelAngles[i]);
+        out = out + angle;
     }
-    out += "], dtype=np.float64)\ndict['lookup-table'] = np.asarray[";
+    out += "], dtype=np.float64)\ndict['angles'] = np.asarray([";
+    for(int i = 0; i<perPixelAngles.length; i++)
+    {
+      double angle = perPixelAngles[i];
+      if(i != perPixelAngles.length-1)
+        out = out + angle + ","; 
+      else
+        out = out + angle;
+    }
+    out += "], dtype=np.float64)\ndict['lookup-table'] = np.asarray([";
+    for(int i = 0; i<perPixelLookupTable.length; i++)
+    {
+      out += "[";
+      for(int o = 0; o<perPixelLookupTable[i].length; o++)
+      {
+        out += "[" + perPixelLookupTable[i][o][0] + "," + perPixelLookupTable[i][o][1] + "]" + (o != perPixelLookupTable[i].length-1 ? "," : "");
+      }
+      out += "]" + (i != perPixelLookupTable.length-1 ? ",\n" : "\n");
+    }
+    out += "], dtype=np.int32)\n";
     return out;
   }
   public static String generateJavaSaveCode()
