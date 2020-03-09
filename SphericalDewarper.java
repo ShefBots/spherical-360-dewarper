@@ -156,13 +156,18 @@ public class SphericalDewarper {
         System.out.print("Saving to " + filename + "... ");
         saveState.setText("Saving...");
         saveState.repaint();
+        configPanel.repaint();
         try(PrintWriter file = new PrintWriter(filename))
         {
-          file.println(generateSaveCode(fileEnding));
+          //file.println(generateSaveCode(fileEnding));
+          generateAndSaveCode(file, fileEnding);
           System.out.println("Saved!");
           saveState.setText("Saved!");
         }catch(FileNotFoundException ex){
           System.out.println("ERROR: File not found for saving - " + ex);
+          saveState.setText("Error!");
+        }catch(Exception ex){
+          System.out.println("ERROR: Unexpected write error - " + ex);
           saveState.setText("Error!");
         }
       }
@@ -255,49 +260,49 @@ public class SphericalDewarper {
   /**
    * Generates the save code for the file.
    */
-  public static String generateSaveCode(String filetype)
+  public static void generateAndSaveCode(PrintWriter f, String filetype)
   {
     if(filetype.equals("py"))
-      return generatePythonSaveCode();
-    if(filetype.equals("java"))
-      return generateJavaSaveCode();
-    return("Error - somehow you've specified a nonexistant save type.");
+      generateAndSavePythonCode(f);
+    else if(filetype.equals("java"))
+      generateAndSaveJavaCode(f);
+    else
+    {
+      f.println("Error - somehow you've specified a nonexistant save type.");
+      System.out.println("Error - somehow you've specified a nonexistant save type.");
+    }
   }
-  public static String generatePythonSaveCode()
+  public static void generateAndSavePythonCode(PrintWriter f)
   {
-    String out = "dict = {}\ndict['angles-degrees'] = np.asarray([";
+    f.print("dict = {}\ndict['angles-degrees'] = np.asarray([");
+    System.out.print("Saving per pixel angles (degrees)...");
     for(int i = 0; i<perPixelAngles.length; i++)
     {
       double angle = perPixelAngles[i]/Math.PI*180;
-      if(i != perPixelAngles.length-1)
-        out = out + angle + ",";
-      else
-        out = out + angle;
+      f.print(angle + (i != perPixelAngles.length-1 ? "," : ""));
     }
-    out += "], dtype=np.float64)\ndict['angles'] = np.asarray([";
+    f.print("], dtype=np.float64)\ndict['angles'] = np.asarray([");
+    System.out.print("saved!\nSaving per pixel angles (radians)...");
     for(int i = 0; i<perPixelAngles.length; i++)
     {
-      double angle = perPixelAngles[i];
-      if(i != perPixelAngles.length-1)
-        out = out + angle + ","; 
-      else
-        out = out + angle;
+      f.print( perPixelAngles[i] + (i != perPixelAngles.length-1 ? "," : ""));
     }
-    out += "], dtype=np.float64)\ndict['lookup-table'] = np.asarray([";
+    f.print("], dtype=np.float64)\ndict['lookup-table'] = np.asarray([");
+    System.out.print("saved!\nSaving lookup table...");
     for(int i = 0; i<perPixelLookupTable.length; i++)
     {
-      out += "[";
+      f.print("[");
       for(int o = 0; o<perPixelLookupTable[i].length; o++)
       {
-        out += "[" + perPixelLookupTable[i][o][0] + "," + perPixelLookupTable[i][o][1] + "]" + (o != perPixelLookupTable[i].length-1 ? "," : "");
+        f.print("[" + perPixelLookupTable[i][o][0] + "," + perPixelLookupTable[i][o][1] + "]" + (o != perPixelLookupTable[i].length-1 ? "," : ""));
       }
-      out += "]" + (i != perPixelLookupTable.length-1 ? ",\n" : "\n");
+      f.print("]" + (i != perPixelLookupTable.length-1 ? ",\n" : "\n"));
     }
-    out += "], dtype=np.int32)\n";
-    return out;
+    f.print("], dtype=np.int32)\n");
+    System.out.println("saved!");
   }
-  public static String generateJavaSaveCode()
+  public static void generateAndSaveJavaCode(PrintWriter f)
   {
-    return "This is not implemented yet.";
+    f.println("This is not implemented yet.");
   }
 }
