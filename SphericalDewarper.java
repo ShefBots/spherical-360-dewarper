@@ -274,20 +274,20 @@ public class SphericalDewarper {
   }
   public static void generateAndSavePythonCode(PrintWriter f)
   {
-    f.print("dict = {}\ndict['angles-degrees'] = np.asarray([");
+    f.print("import numpy as np\ndewarpData = {}\ndewarpData['angles-degrees'] = np.asarray([");
     System.out.print("Saving per pixel angles (degrees)...");
     for(int i = 0; i<perPixelAngles.length; i++)
     {
       double angle = perPixelAngles[i]/Math.PI*180;
       f.print(angle + (i != perPixelAngles.length-1 ? "," : ""));
     }
-    f.print("], dtype=np.float64)\ndict['angles'] = np.asarray([");
+    f.print("], dtype=np.float64)\ndewarpData['angles'] = np.asarray([");
     System.out.print("saved!\nSaving per pixel angles (radians)...");
     for(int i = 0; i<perPixelAngles.length; i++)
     {
       f.print( perPixelAngles[i] + (i != perPixelAngles.length-1 ? "," : ""));
     }
-    f.print("], dtype=np.float64)\ndict['lookup-table'] = np.asarray([");
+    f.print("], dtype=np.float64)\ndewarpData['lookup-table'] = np.asarray([");
     System.out.print("saved!\nSaving lookup table...");
     for(int i = 0; i<perPixelLookupTable.length; i++)
     {
