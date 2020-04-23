@@ -124,7 +124,7 @@ public class SphericalDewarper {
           BufferedImage img = null;
           try {
                 img = ImageIO.read(imgFile);
-                sampleImageDisplay.setImage(img);
+                sampleImageDisplay.imageContainer.setImage(img);
                 computeAndRenderVisualiser();
           } catch (IOException ex) {
             System.out.println("Warning: Unable to read and load file. Please try another.\n\t" + ex);

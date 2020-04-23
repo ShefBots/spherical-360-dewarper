@@ -223,26 +223,6 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
     SphericalDewarper.computeAndRenderVisualiser();
   }
 
-  public void setImage(BufferedImage img)
-  {
-    imageContainer.setImage(img);
-    //imageContainer.image = img;
-    //Dimension imgDim = new Dimension(img.getWidth(), img.getHeight());
-    //imageContainer.setPreferredSize(imgDim);
-    //imageContainer.setSize(imgDim);
-    //imageContainer.setMaximumSize(imgDim);
-    //imageContainer.reticule.setX(imgDim.getWidth()/2.0);
-    //imageContainer.reticule.setY(imgDim.getHeight()/2.0);
-    ////renderImage();
-    //imageContainer.repaint();
-    //imageContainer.revalidate();
-  }
-  //private void renderImage()
-  //{
-  //  // Draw the image
-  //  imageContainer.repaint();
-  //}
-
   /**
    * Returns the projected coordinate `angle` way around the reticule and `distanceFromCenter` from the center.
    *
