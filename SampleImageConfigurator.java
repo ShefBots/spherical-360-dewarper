@@ -17,7 +17,6 @@ import java.awt.event.KeyListener;
 public class SampleImageConfigurator extends JFrame implements ActionListener {
 
   public static class ImageContainer extends JPanel {
-    private int width, height;
     public TPolygonEntity reticule;
     private TPPolygonEntity subReticule;
 
@@ -26,8 +25,6 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
     public ImageContainer (int w, int h)
     {
       super();
-      this.width = w;
-      this.height = h;
       this.setPreferredSize(new Dimension(w, h));
 
       // Draw the reticule
@@ -52,6 +49,31 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
       subretPoints[4] = new Point(0.5, 0);
       subretPoints[5] = new Point(0, 0);
       subReticule = new TPPolygonEntity(0,0,subretPoints, reticule);
+    }
+
+    // Checks if the reticule is within the bounds of the image, and moves it inward if not.
+    public void bounceReticule()
+    {
+      // The outer reticule has a radius of 0.5 and a diameter of 1, a.k.a. it's scale is it's total diameter.
+      double minImageDimension = Math.min(image.getWidth()-1, image.getHeight()-1);
+      reticule.setScale(Math.min(reticule.getXscale(), minImageDimension));
+      int radius = (int)Math.ceil(reticule.getXscale()/2.0);// Ceil to avoid half-pixel cliping
+      reticule.setX(Math.min(Math.max(reticule.getX(), radius), image.getWidth()-radius-1));
+      reticule.setY(Math.min(Math.max(reticule.getY(), radius), image.getHeight()-radius-1));
+    }
+
+    public void setImage(BufferedImage img)
+    {
+      image = img;
+      Dimension imgDim = new Dimension(img.getWidth(), img.getHeight());
+      setPreferredSize(imgDim);
+      setSize(imgDim);
+      setMaximumSize(imgDim);
+      reticule.setX(imgDim.getWidth()/2.0);
+      reticule.setY(imgDim.getHeight()/2.0);
+      bounceReticule();
+      repaint();
+      revalidate();
     }
 
     public void paintComponent(Graphics g)
@@ -196,27 +218,30 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
       // This happens if we don't parse a regular command, but instead a string from one of the parameter options.
     }
 
+    imageContainer.bounceReticule();
     imageContainer.repaint();
     SphericalDewarper.computeAndRenderVisualiser();
   }
 
   public void setImage(BufferedImage img)
   {
-    imageContainer.image = img;
-    Dimension imgDim = new Dimension(img.getWidth(), img.getHeight());
-    imageContainer.setPreferredSize(imgDim);
-    imageContainer.setSize(imgDim);
-    imageContainer.setMaximumSize(imgDim);
-    imageContainer.reticule.setX(imgDim.getWidth()/2.0);
-    imageContainer.reticule.setY(imgDim.getHeight()/2.0);
-    renderImage();
-    imageContainer.revalidate();
+    imageContainer.setImage(img);
+    //imageContainer.image = img;
+    //Dimension imgDim = new Dimension(img.getWidth(), img.getHeight());
+    //imageContainer.setPreferredSize(imgDim);
+    //imageContainer.setSize(imgDim);
+    //imageContainer.setMaximumSize(imgDim);
+    //imageContainer.reticule.setX(imgDim.getWidth()/2.0);
+    //imageContainer.reticule.setY(imgDim.getHeight()/2.0);
+    ////renderImage();
+    //imageContainer.repaint();
+    //imageContainer.revalidate();
   }
-  private void renderImage()
-  {
-    // Draw the image
-    imageContainer.repaint();
-  }
+  //private void renderImage()
+  //{
+  //  // Draw the image
+  //  imageContainer.repaint();
+  //}
 
   /**
    * Returns the projected coordinate `angle` way around the reticule and `distanceFromCenter` from the center.
