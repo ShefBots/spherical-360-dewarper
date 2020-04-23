@@ -16,7 +16,7 @@ import java.awt.event.KeyListener;
 
 public class SampleImageConfigurator extends JFrame implements ActionListener {
 
-  public static class ImageContainer extends JPanel{
+  public static class ImageContainer extends JPanel {
     private int width, height;
     public TPolygonEntity reticule;
     private TPPolygonEntity subReticule;
@@ -53,6 +53,7 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
       subretPoints[5] = new Point(0, 0);
       subReticule = new TPPolygonEntity(0,0,subretPoints, reticule);
     }
+
     public void paintComponent(Graphics g)
     {
       super.paintComponent(g);
@@ -106,8 +107,10 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
     setDefaultCloseOperation(EXIT_ON_CLOSE);
 
     // Sample Image Display
+    JPanel containerContainer = new JPanel();// Put the container in a container to center it
     imageContainer = new ImageContainer(1280, 720);
-    scrollPane = new JScrollPane(imageContainer);
+    containerContainer.add(imageContainer);
+    scrollPane = new JScrollPane(containerContainer);
     this.add(scrollPane, BorderLayout.CENTER);
 
     //// The control buttons:
@@ -200,10 +203,14 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
   public void setImage(BufferedImage img)
   {
     imageContainer.image = img;
-    imageContainer.setPreferredSize(new Dimension(img.getWidth(), img.getHeight()));
-    imageContainer.reticule.setX(img.getWidth()/2.0);
-    imageContainer.reticule.setY(img.getHeight()/2.0);
+    Dimension imgDim = new Dimension(img.getWidth(), img.getHeight());
+    imageContainer.setPreferredSize(imgDim);
+    imageContainer.setSize(imgDim);
+    imageContainer.setMaximumSize(imgDim);
+    imageContainer.reticule.setX(imgDim.getWidth()/2.0);
+    imageContainer.reticule.setY(imgDim.getHeight()/2.0);
     renderImage();
+    imageContainer.revalidate();
   }
   private void renderImage()
   {
