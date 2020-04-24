@@ -18,7 +18,7 @@ import java.io.PrintWriter;
 
 public class SphericalDewarper {
 
-  public static String VERSION = "1.0.2";
+  public static String VERSION = "1.1.2";
 
   public static Integer horizontalResolution = 550;
   public static Integer verticalResolution = 400;
