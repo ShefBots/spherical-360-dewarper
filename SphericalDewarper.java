@@ -18,7 +18,7 @@ import java.io.PrintWriter;
 
 public class SphericalDewarper {
 
-  public static String VERSION = "1.1.2";
+  public static String VERSION = "1.1.3";
 
   public static Integer horizontalResolution = 550;
   public static Integer verticalResolution = 400;
@@ -323,7 +323,8 @@ public class SphericalDewarper {
       for(int y = 0; y<perPixelLookupTable[x].length; y++)
       {
         int[] data = perPixelLookupTable[x][y];
-        vectorLookup[perPixelLookupTable.length*y + (perPixelLookupTable.length-1-x)] = data[1]*sampleImageDisplay.imageContainer.image.getWidth() + data[0];
+        //vectorLookup[perPixelLookupTable.length*y + (perPixelLookupTable.length-1-x)] = data[1]*sampleImageDisplay.imageContainer.image.getWidth() + data[0];
+        vectorLookup[perPixelLookupTable.length*y + x] = data[1]*sampleImageDisplay.imageContainer.image.getWidth() + data[0];
       }
     }
     for(int i = 0; i<vectorLookup.length; i++)
