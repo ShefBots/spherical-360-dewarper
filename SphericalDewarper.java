@@ -264,19 +264,30 @@ public class SphericalDewarper {
    */
   public static void generateAndSaveCode(PrintWriter f, String filetype)
   {
+    // Assemble reference notes:
+    String[] docstring = new String[]{
+                         "AUTO-GENERATED FILE.",
+                         "File Version: " + VERSION,
+                         "Intended Input Image Width: " + sampleImageDisplay.imageContainer.image.getWidth(),
+                         "Intended Input Image Height: " + sampleImageDisplay.imageContainer.image.getHeight(),
+                         "Output Image Width: " + horizontalResolution,
+                         "Output Image Height: " + verticalResolution};
+
+    // Export the file:
     if(filetype.equals("py"))
-      generateAndSavePythonCode(f);
+      generateAndSavePythonCode(docstring, f);
     else if(filetype.equals("java"))
-      generateAndSaveJavaCode(f);
+      generateAndSaveJavaCode(docstring, f);
     else
     {
       f.println("Error - somehow you've specified a nonexistant save type.");
       System.out.println("Error - somehow you've specified a nonexistant save type.");
     }
   }
-  public static void generateAndSavePythonCode(PrintWriter f)
+  public static void generateAndSavePythonCode(String[] docstring, PrintWriter f)
   {
-    f.print("# AUTO-GENERATED FILE.\n# File Version: " + VERSION + "\n");
+    for(String s : docstring)
+      f.print("#" + s + "\n");
     f.print("import numpy as np\ndewarpData = {}\ndewarpData['angles-degrees'] = np.asarray([");
     System.out.print("Saving per pixel angles (degrees)...");
     for(int i = 0; i<perPixelAngles.length; i++)
@@ -302,9 +313,27 @@ public class SphericalDewarper {
       f.print("]" + (i != perPixelLookupTable.length-1 ? ",\n" : "\n"));
     }
     f.print("], dtype=np.int32)\n");
-    System.out.println("saved!");
+    System.out.println("saved!\nSaving lookup vector...");
+
+    // For each pixel in the lookup table, find it's corresponding pixel in the input data as an index from 0 to (inputdata.width*inputdata.height):
+    f.print("dewarpData['lookup-vector'] = np.asarray([");
+    int[] vectorLookup = new int[perPixelLookupTable.length * perPixelLookupTable[0].length];
+    for(int x = 0; x<perPixelLookupTable.length; x++)
+    {
+      for(int y = 0; y<perPixelLookupTable[x].length; y++)
+      {
+        int[] data = perPixelLookupTable[x][y];
+        vectorLookup[perPixelLookupTable.length*y + (perPixelLookupTable.length-1-x)] = data[1]*sampleImageDisplay.imageContainer.image.getWidth() + data[0];
+      }
+    }
+    for(int i = 0; i<vectorLookup.length; i++)
+    {
+      f.print(vectorLookup[i] + (i != vectorLookup.length-1? "," : ""));
+    }
+    f.print("], dtype=np.int32)\n");
+    System.out.print("saved!");
   }
-  public static void generateAndSaveJavaCode(PrintWriter f)
+  public static void generateAndSaveJavaCode(String[] docstring, PrintWriter f)
   {
     f.println("This is not implemented yet.");
   }
