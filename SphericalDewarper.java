@@ -18,6 +18,8 @@ import java.io.PrintWriter;
 
 public class SphericalDewarper {
 
+  public static String VERSION = "1.0.2";
+
   public static Integer horizontalResolution = 550;
   public static Integer verticalResolution = 400;
   public static Double vertAngleStart = 0.0;
@@ -274,6 +276,7 @@ public class SphericalDewarper {
   }
   public static void generateAndSavePythonCode(PrintWriter f)
   {
+    f.print("# AUTO-GENERATED FILE.\n# File Version: " + VERSION + "\n");
     f.print("import numpy as np\ndewarpData = {}\ndewarpData['angles-degrees'] = np.asarray([");
     System.out.print("Saving per pixel angles (degrees)...");
     for(int i = 0; i<perPixelAngles.length; i++)
