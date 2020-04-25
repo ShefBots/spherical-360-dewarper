@@ -18,6 +18,29 @@ import java.io.PrintWriter;
 
 public class SphericalDewarper {
 
+  private static abstract class ImageLoader implements ActionListener {
+    public static final JFileChooser fileChooser = new JFileChooser();
+
+    public void actionPerformed(ActionEvent e) {
+      int fileChooserReturn = fileChooser.showOpenDialog(configFrame);
+      if(fileChooserReturn == JFileChooser.APPROVE_OPTION)
+      {
+        File imgFile = fileChooser.getSelectedFile();
+        System.out.println("Opening file " + imgFile + "...");
+        BufferedImage img = null;
+        try {
+              img = ImageIO.read(imgFile);
+              doSomethingWithImage(img);// Do something class-specific after loading the image
+              computeAndRenderVisualiser();
+        } catch (IOException ex) {
+          System.out.println("Warning: Unable to read and load file. Please try another.\n\t" + ex);
+        }
+      }
+    }
+
+    public abstract void doSomethingWithImage(BufferedImage img);
+  }
+
   public static String VERSION = "1.1.3";
 
   public static Integer horizontalResolution = 550;
@@ -27,6 +50,7 @@ public class SphericalDewarper {
 
   public static SampleImageConfigurator sampleImageDisplay = new SampleImageConfigurator();
   public static SampleOutputDisplay sampleOutput = new SampleOutputDisplay(horizontalResolution, verticalResolution);
+  public static JFrame configFrame = new JFrame();
 
   public static double[] perPixelAngles; // Stores the angle from horizontal at each vertical step
   public static int[][][] perPixelLookupTable; // Stores a map of each coordinate to a new coordinate (in the form [width][height][x,y])
@@ -37,10 +61,92 @@ public class SphericalDewarper {
     // ReflectionRegressor.cameraDistance is not needed! (Plus probably ball radius, but you can create a static function that changes that object - maybe make the object private?)
     ReflectionRegressor.setCameraDistance(30);
 
-    //// CONFIG UI
-    JFrame configFrame = new JFrame();
+    //// Config UI
+    //JFrame configFrame = new JFrame();
     configFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    configFrame.setTitle("Config");
+    configFrame.setTitle("Dewarper Config");
+
+    // Store config panels in a tabbed pane
+    JTabbedPane tabbedPane = new JTabbedPane();
+    JPanel primaryConfigPanel = createPrimaryConfigPanel(tabbedPane);
+    JPanel masksConfigPanel = createMasksConfigPanel();
+
+    tabbedPane.addTab("General", primaryConfigPanel);
+    tabbedPane.addTab("Masks", masksConfigPanel);
+    tabbedPane.setEnabledAt(1, false); // Disable the masks tab until an image is loaded
+
+    // Finalize and pack everything
+    configFrame.add(tabbedPane);
+    configFrame.pack();
+    configFrame.setLocationRelativeTo(null);
+    configFrame.setVisible(true);
+
+    // Render the initial run of the visualiser
+    computeAndRenderVisualiser();
+  }
+
+  public static JPanel createMasksConfigPanel()
+  {
+    JPanel configPanel = new JPanel();
+    configPanel.setLayout(new BoxLayout(configPanel, BoxLayout.Y_AXIS));
+
+    //// Closest-pixel (nearest neighbour) mask panel
+    JPanel NNmaskPanel = new JPanel();
+    NNmaskPanel.setBorder(BorderFactory.createTitledBorder("Nearest Neighbour Mask"));
+    NNmaskPanel.setLayout(new GridLayout(0,1));
+    JCheckBox enableNNmaskBtn = new JCheckBox("Enable");
+    enableNNmaskBtn.setEnabled(false);
+    // Load Mask Option
+    JButton loadNNmaskBtn = new JButton("Load Mask");
+    loadNNmaskBtn.addActionListener(new ImageLoader(){
+      @Override
+      public void doSomethingWithImage(BufferedImage img)
+      {
+        // TODO: Add the mask image
+        enableNNmaskBtn.setEnabled(true);
+        enableNNmaskBtn.setSelected(true);
+      }
+    });
+    NNmaskPanel.add(loadNNmaskBtn);
+    NNmaskPanel.add(enableNNmaskBtn);
+    configPanel.add(NNmaskPanel);
+
+    //// Direct-pixel mask panel
+    JPanel DPmaskPanel = new JPanel();
+    DPmaskPanel.setBorder(BorderFactory.createTitledBorder("Static Mask"));
+    DPmaskPanel.setLayout(new GridLayout(0,1));
+    JCheckBox enableDPmaskBtn = new JCheckBox("Enable");
+    enableDPmaskBtn.setEnabled(false);
+    JPanel coordinatePanel = new JPanel(new GridLayout(1,2));
+    JTextField xCoordinateSelector = new JTextField("0");
+    JTextField yCoordinateSelector = new JTextField("0");
+    xCoordinateSelector.setEnabled(false);
+    yCoordinateSelector.setEnabled(false);
+    JButton loadDPmaskBtn = new JButton("Load Mask");
+    loadDPmaskBtn.addActionListener(new ImageLoader(){
+      @Override
+      public void doSomethingWithImage(BufferedImage img)
+      {
+        // TODO: Add the mask image, configure JText field to update the mask link on click
+        enableDPmaskBtn.setEnabled(true);
+        enableDPmaskBtn.setSelected(true);
+        xCoordinateSelector.setEnabled(true);
+        yCoordinateSelector.setEnabled(true);
+      }
+    });
+    DPmaskPanel.add(loadDPmaskBtn);
+    DPmaskPanel.add(new JLabel("Mask pixel location (x,y):"));
+    coordinatePanel.add(xCoordinateSelector);
+    coordinatePanel.add(yCoordinateSelector);
+    DPmaskPanel.add(coordinatePanel);
+    DPmaskPanel.add(enableDPmaskBtn);
+    configPanel.add(DPmaskPanel);
+
+    return configPanel;
+  }
+
+  public static JPanel createPrimaryConfigPanel(JTabbedPane tabbedPane)
+  {
     JPanel configPanel = new JPanel();
     configPanel.setLayout(new BoxLayout(configPanel, BoxLayout.Y_AXIS));
 
@@ -111,27 +217,14 @@ public class SphericalDewarper {
     configPanel.add(resPanel);
 
     // Add the file loader UI:
-    final JFileChooser fileChooser = new JFileChooser();
-    //fileChooser.addChoosableFileFilter(new ImageFilter());// TODO: Could filter the file selector to only be images.
     JButton loadFileBtn = new JButton("Load Sample Image");
     loadFileBtn.setSize(new Dimension(resPanel.getSize().width, loadFileBtn.getSize().height));
-    loadFileBtn.addActionListener(new ActionListener() {
+    loadFileBtn.addActionListener(new ImageLoader(){
       @Override
-      public void actionPerformed(ActionEvent e) {
-        int fileChooserReturn = fileChooser.showOpenDialog(configPanel);
-        if(fileChooserReturn == JFileChooser.APPROVE_OPTION)
-        {
-          File imgFile = fileChooser.getSelectedFile();
-          System.out.println("Opening file " + imgFile + "...");
-          BufferedImage img = null;
-          try {
-                img = ImageIO.read(imgFile);
-                sampleImageDisplay.imageContainer.setImage(img);
-                computeAndRenderVisualiser();
-          } catch (IOException ex) {
-            System.out.println("Warning: Unable to read and load file. Please try another.\n\t" + ex);
-          }
-        }
+      public void doSomethingWithImage(BufferedImage img)
+      {
+        sampleImageDisplay.imageContainer.setImage(img);
+        tabbedPane.setEnabledAt(1, true); // Enable the Masks tab
       }
     });
     configPanel.add(loadFileBtn);
@@ -180,13 +273,12 @@ public class SphericalDewarper {
     savePanel.add(saveState);
     configPanel.add(savePanel);
 
-    configFrame.add(configPanel);
-    configFrame.pack();
-    configFrame.setLocationRelativeTo(null);
-    configFrame.setVisible(true);
+    // Ending segment
+    //configPanel.add(new JSeparator());
+    //configPanel.add(new JPanel());
 
-    // Render the initial run of the visualiser
-    computeAndRenderVisualiser();
+    // Return the config panel
+    return configPanel;
   }
 
   /**
