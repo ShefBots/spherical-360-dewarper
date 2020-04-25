@@ -22,6 +22,10 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
 
     public BufferedImage image = null;
 
+    public BufferedImage NNmaskImage = null;
+    private BufferedImage NNmaskDisplay = null;
+    private boolean usingNNmask = false;
+
     public ImageContainer (int w, int h)
     {
       super();
@@ -75,12 +79,58 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
       repaint();
       revalidate();
     }
+    public void setNNmaskImage(boolean enableDisable)
+    {
+      usingNNmask = enableDisable;
+      repaint();
+    }
+    public void setNNmaskImage(BufferedImage img)
+    {
+      if(img.getWidth() != image.getWidth() || img.getHeight() != image.getHeight())
+      {
+        System.out.println("ERROR: The provided mask does not possess the same dimensions as the sample image.");
+        return;
+      }
+
+      // Save the mask image
+      usingNNmask = true;
+      NNmaskImage = img;
+
+      // Generate the display image
+      NNmaskDisplay = generateOutline(img, Color.RED);
+      repaint();
+    }
+    private BufferedImage generateOutline(BufferedImage img, Color c)
+    {
+      int width = img.getWidth();
+      int height = img.getHeight();
+      BufferedImage disp = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+      for(int x = 0; x < width; x++)
+        for(int y = 0; y < height; y++)
+        {
+          boolean blackNear = false;
+          if(new Color(img.getRGB(x,y)).getRed() >= 128)
+            for(int i = Math.max(0,x-1); i<=Math.min(width-1,x+1); i++)
+              for(int o = Math.max(0,y-1); o<=Math.min(height-1, y+1); o++)
+              {
+                if(i == x && o == y)
+                  continue;
+                if(new Color(img.getRGB(i,o)).getRed() < 128)
+                  blackNear = true;
+              }
+          if(blackNear)
+            disp.setRGB(x,y,c.getRGB());
+        }
+      return disp;
+    }
 
     public void paintComponent(Graphics g)
     {
       super.paintComponent(g);
       g.setColor(Color.ORANGE);
       ((Graphics2D)g).drawImage(image,0,0,getWidth(),getHeight(), null);
+      if(NNmaskDisplay != null && usingNNmask)
+        ((Graphics2D)g).drawImage(NNmaskDisplay,0,0,getWidth(),getHeight(), null);
       reticule.draw((Graphics2D)g);
       subReticule.draw((Graphics2D)g);
     }

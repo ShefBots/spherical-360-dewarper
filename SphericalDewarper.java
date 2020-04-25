@@ -96,13 +96,21 @@ public class SphericalDewarper {
     NNmaskPanel.setLayout(new GridLayout(0,1));
     JCheckBox enableNNmaskBtn = new JCheckBox("Enable");
     enableNNmaskBtn.setEnabled(false);
+    enableNNmaskBtn.addActionListener(new ActionListener(){
+      @Override
+      public void actionPerformed(ActionEvent e)
+      {
+        sampleImageDisplay.imageContainer.setNNmaskImage(enableNNmaskBtn.isSelected());
+      }
+    });
     // Load Mask Option
     JButton loadNNmaskBtn = new JButton("Load Mask");
     loadNNmaskBtn.addActionListener(new ImageLoader(){
       @Override
       public void doSomethingWithImage(BufferedImage img)
       {
-        // TODO: Add the mask image
+        // TODO: Add the mask image, enable disable button
+        sampleImageDisplay.imageContainer.setNNmaskImage(img);
         enableNNmaskBtn.setEnabled(true);
         enableNNmaskBtn.setSelected(true);
       }
