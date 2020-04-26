@@ -101,6 +101,7 @@ public class SphericalDewarper {
       public void actionPerformed(ActionEvent e)
       {
         sampleImageDisplay.imageContainer.setNNmaskImage(enableNNmaskBtn.isSelected());
+        computeAndRenderVisualiser();
       }
     });
     // Load Mask Option
@@ -344,9 +345,61 @@ public class SphericalDewarper {
           perPixelLookupTable[x][y][1] = (int)coordinate.getY();
         }
       }
+      // Alter the lookup table to account for the nearest-neighbour mask
+      // TODO: (Also see below) NNmaskImage is public within ImageContainer, and referenced here - this hould probably be changed.
+      // TODO: I also hate the horrifically nested code below, but this seems like the most efficient way to do it.
+      if(sampleImageDisplay.imageContainer.isNNmaskEnabled())
+      {
+        //System.out.print("Masking..");
+        // Search to find the neareset non-mask pixel at each pixel
+        // (The start pixel itself will, by default be the closest non-mask pixel):
+        BufferedImage img = sampleImageDisplay.imageContainer.NNmaskImage;// Reference to image
+        for(int x = 0; x<horizontalResolution; x++)
+        {
+          for(int y = 0; y<verticalResolution; y++)
+          {
+            // Expand the search radius until it completely encloses the
+            // circle formed taking the radius from the current closest point
+            // (Note that all distances are done without sqrts)
+            int[] closestPixel = new int[]{0,0};// By default, the closest pixel is the central pixel
+            int searchRadius = 0;
+            Integer closestDistance = Integer.MAX_VALUE;
+            int dx, dy;
+            int[] maskSpacePixel = perPixelLookupTable[x][y];
+            while(searchRadius*searchRadius < closestDistance)
+            {
+              for(int xs = maskSpacePixel[0]-searchRadius; xs<=maskSpacePixel[0]+searchRadius; xs++)
+                for(int ys = maskSpacePixel[1]-searchRadius; ys<=maskSpacePixel[1]+searchRadius; ys++)
+                  // We've found a non-mask part:
+                  if((img.getRGB(xs,ys)&0xff) >= 128)
+                  {
+                    // Calculate it's distance:
+                    dx = xs-maskSpacePixel[0];
+                    dy = ys-maskSpacePixel[1];
+                    int distance = dx*dx+dy*dy;
+                    // If it's closer than the closest pixel, update that
+                    // Also update the search radius so that it
+                    // checks the whole circle possible for closer points
+                    if(distance < closestDistance)
+                    {
+                      //System.out.println("Found a non-mask at ("+dx+","+dy+")");
+                      closestPixel[0] = dx;
+                      closestPixel[1] = dy;
+                      closestDistance = distance;
+                    }
+                  }
+              searchRadius++;// Increase the search radius
+            }
+            perPixelLookupTable[x][y][0] = maskSpacePixel[0] + closestPixel[0];
+            perPixelLookupTable[x][y][1] = maskSpacePixel[1] + closestPixel[1];
+          }
+        }
+        //System.out.print("done!");
+      }
 
       // Use lookup table to draw dewarped image
-      // TODO: Probably shouldn't reference the images like this, instead should make getters and setters (and put the subclasses and ImageContainer instances back to being private)
+      // TODO: Probably shouldn't reference the images like this, instead should make getters and setters
+      // (and put the subclasses and ImageContainer instances back to being private)
       if (sampleImageDisplay.imageContainer.image != null)
         for(int x = 0; x<horizontalResolution; x++)
         {

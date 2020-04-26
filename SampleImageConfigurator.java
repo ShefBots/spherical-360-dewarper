@@ -100,6 +100,11 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
       NNmaskDisplay = generateOutline(img, Color.RED);
       repaint();
     }
+    public boolean isNNmaskEnabled()
+    {
+      return usingNNmask;
+    }
+
     private BufferedImage generateOutline(BufferedImage img, Color c)
     {
       // Note: Now this method uses img.getRGB(x,y)&0xff to get the value of the color
