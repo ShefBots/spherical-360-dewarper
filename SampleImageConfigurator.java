@@ -19,12 +19,17 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
   public static class ImageContainer extends JPanel {
     public TPolygonEntity reticule;
     private TPPolygonEntity subReticule;
+    public TPolygonEntity directLinkReticule;
 
     public BufferedImage image = null;
 
     public BufferedImage NNmaskImage = null;
     private BufferedImage NNmaskDisplay = null;
     private boolean usingNNmask = false;
+
+    public BufferedImage DPmaskImage = null;
+    private BufferedImage DPmaskDisplay = null;
+    private boolean usingDPmask = false;
 
     public ImageContainer (int w, int h)
     {
@@ -53,6 +58,11 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
       subretPoints[4] = new Point(0.5, 0);
       subretPoints[5] = new Point(0, 0);
       subReticule = new TPPolygonEntity(0,0,subretPoints, reticule);
+
+      // Draw the direct link reticule
+      directLinkReticule = new TPolygonEntity(0.0,0.0,subretPoints);
+      directLinkReticule.setXscale(30);
+      directLinkReticule.setYscale(30);
     }
 
     // Checks if the reticule is within the bounds of the image, and moves it inward if not.
@@ -79,25 +89,23 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
       repaint();
       revalidate();
     }
-    public void setNNmaskImage(boolean enableDisable)
-    {
-      usingNNmask = enableDisable;
-      repaint();
-    }
+
     public void setNNmaskImage(BufferedImage img)
     {
-      if(img.getWidth() != image.getWidth() || img.getHeight() != image.getHeight())
-      {
-        System.out.println("ERROR: The provided mask does not possess the same dimensions as the sample image.");
+      if(!dimensionCheck(img))
         return;
-      }
 
       // Save the mask image
       usingNNmask = true;
       NNmaskImage = img;
 
       // Generate the display image
-      NNmaskDisplay = generateOutline(img, Color.RED);
+      NNmaskDisplay = generateOutline(img, Color.GREEN);
+      repaint();
+    }
+    public void setNNmaskImage(boolean enableDisable)
+    {
+      usingNNmask = enableDisable;
       repaint();
     }
     public boolean isNNmaskEnabled()
@@ -105,11 +113,47 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
       return usingNNmask;
     }
 
+    public void setDPmaskImage(BufferedImage img)
+    {
+      if(!dimensionCheck(img))
+        return;
+
+      // Save the mask image
+      usingDPmask = true;
+      DPmaskImage = img;
+
+      // Generate the display image
+      DPmaskDisplay = generateOutline(img, Color.RED);
+      repaint();
+    }
+    public void setDPmaskImage(boolean enableDisable)
+    {
+      usingDPmask = enableDisable;
+      repaint();
+    }
+    public boolean isDPmaskEnabled()
+    {
+      return usingDPmask;
+    }
+      
+
+    /**
+     * Checks that the given image has the same dimensions as the primary image
+     */
+    private boolean dimensionCheck(BufferedImage img)
+    {
+      if(img.getWidth() == image.getWidth() &&  img.getHeight() == image.getHeight())
+        return true;
+      System.out.println("ERROR: The provided mask does not possess the same dimensions as the sample image.");
+      return false;
+    }
+
     private BufferedImage generateOutline(BufferedImage img, Color c)
     {
       // Note: Now this method uses img.getRGB(x,y)&0xff to get the value of the color
       // instead of (new Color(img.getRGB(x,y))).getRed() in an effort to save on RAM
       // (and hopefully cycles)
+      System.out.print("Generating mask outline... ");
       int width = img.getWidth();
       int height = img.getHeight();
       BufferedImage disp = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
@@ -129,18 +173,25 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
           if(blackNear)
             disp.setRGB(x,y,c.getRGB());
         }
+      System.out.println("done!");
       return disp;
     }
 
     public void paintComponent(Graphics g)
     {
       super.paintComponent(g);
+      Graphics2D g2d = (Graphics2D)g;
       g.setColor(Color.ORANGE);
-      ((Graphics2D)g).drawImage(image,0,0,getWidth(),getHeight(), null);
+      g2d.drawImage(image,0,0,getWidth(),getHeight(), null);
       if(NNmaskDisplay != null && usingNNmask)
-        ((Graphics2D)g).drawImage(NNmaskDisplay,0,0,getWidth(),getHeight(), null);
-      reticule.draw((Graphics2D)g);
-      subReticule.draw((Graphics2D)g);
+        g2d.drawImage(NNmaskDisplay,0,0,getWidth(),getHeight(), null);
+      if(DPmaskDisplay != null && usingDPmask)
+      {
+        g2d.drawImage(DPmaskDisplay,0,0,getWidth(),getHeight(), null);
+        directLinkReticule.draw(g2d);
+      }
+      reticule.draw(g2d);
+      subReticule.draw(g2d);
     }
   }
 

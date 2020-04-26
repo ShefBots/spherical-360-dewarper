@@ -110,9 +110,7 @@ public class SphericalDewarper {
       @Override
       public void doSomethingWithImage(BufferedImage img)
       {
-        System.out.print("Generating mask outline... ");
         sampleImageDisplay.imageContainer.setNNmaskImage(img);
-        System.out.println("done!");
         enableNNmaskBtn.setEnabled(true);
         enableNNmaskBtn.setSelected(true);
       }
@@ -127,9 +125,31 @@ public class SphericalDewarper {
     DPmaskPanel.setLayout(new GridLayout(0,1));
     JCheckBox enableDPmaskBtn = new JCheckBox("Enable");
     enableDPmaskBtn.setEnabled(false);
+    enableDPmaskBtn.addActionListener(new ActionListener(){
+      @Override
+      public void actionPerformed(ActionEvent e)
+      {
+        sampleImageDisplay.imageContainer.setDPmaskImage(enableDPmaskBtn.isSelected());
+        computeAndRenderVisualiser();
+      }
+    });
     JPanel coordinatePanel = new JPanel(new GridLayout(1,2));
     JTextField xCoordinateSelector = new JTextField("0");
+    xCoordinateSelector.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        sampleImageDisplay.imageContainer.directLinkReticule.setX(Double.parseDouble(xCoordinateSelector.getText()));
+        sampleImageDisplay.imageContainer.repaint();
+        computeAndRenderVisualiser();
+      }
+    });
     JTextField yCoordinateSelector = new JTextField("0");
+    yCoordinateSelector.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        sampleImageDisplay.imageContainer.directLinkReticule.setY(Double.parseDouble(yCoordinateSelector.getText()));
+        sampleImageDisplay.imageContainer.repaint();
+        computeAndRenderVisualiser();
+      }
+    });
     xCoordinateSelector.setEnabled(false);
     yCoordinateSelector.setEnabled(false);
     JButton loadDPmaskBtn = new JButton("Load Mask");
@@ -138,6 +158,7 @@ public class SphericalDewarper {
       public void doSomethingWithImage(BufferedImage img)
       {
         // TODO: Add the mask image, configure JText field to update the mask link on click
+        sampleImageDisplay.imageContainer.setDPmaskImage(img);
         enableDPmaskBtn.setEnabled(true);
         enableDPmaskBtn.setSelected(true);
         xCoordinateSelector.setEnabled(true);
@@ -345,15 +366,27 @@ public class SphericalDewarper {
           perPixelLookupTable[x][y][1] = (int)coordinate.getY();
         }
       }
+
+      // Alter the lookup table to account for the direct-pixel mask
+      if(sampleImageDisplay.imageContainer.isDPmaskEnabled())
+      {
+        // Loop through the lookup table and update the links to the set coordinates
+        for(int x = 0; x<horizontalResolution; x++)
+          for(int y = 0; y<verticalResolution; y++)
+            if((sampleImageDisplay.imageContainer.DPmaskImage.getRGB(perPixelLookupTable[x][y][0], perPixelLookupTable[x][y][1])&0xff) < 128)
+            {
+              perPixelLookupTable[x][y][0] = (int)sampleImageDisplay.imageContainer.directLinkReticule.getX();
+              perPixelLookupTable[x][y][1] = (int)sampleImageDisplay.imageContainer.directLinkReticule.getY();
+            }
+      }
+
       // Alter the lookup table to account for the nearest-neighbour mask
       // TODO: (Also see below) NNmaskImage is public within ImageContainer, and referenced here - this hould probably be changed.
       // TODO: I also hate the horrifically nested code below, but this seems like the most efficient way to do it.
       if(sampleImageDisplay.imageContainer.isNNmaskEnabled())
       {
-        //System.out.print("Masking..");
         // Search to find the neareset non-mask pixel at each pixel
         // (The start pixel itself will, by default be the closest non-mask pixel):
-        BufferedImage img = sampleImageDisplay.imageContainer.NNmaskImage;// Reference to image
         for(int x = 0; x<horizontalResolution; x++)
         {
           for(int y = 0; y<verticalResolution; y++)
@@ -370,8 +403,12 @@ public class SphericalDewarper {
             {
               for(int xs = maskSpacePixel[0]-searchRadius; xs<=maskSpacePixel[0]+searchRadius; xs++)
                 for(int ys = maskSpacePixel[1]-searchRadius; ys<=maskSpacePixel[1]+searchRadius; ys++)
-                  // We've found a non-mask part:
-                  if((img.getRGB(xs,ys)&0xff) >= 128)
+                {
+                  // Skip the direct lookup parts, as we don't want any of that
+                  if(sampleImageDisplay.imageContainer.isDPmaskEnabled() && (sampleImageDisplay.imageContainer.DPmaskImage.getRGB(xs,ys)&0xff) < 128)
+                    continue;
+                  // If we've found a non-mask part:
+                  if((sampleImageDisplay.imageContainer.NNmaskImage.getRGB(xs,ys)&0xff) >= 128)
                   {
                     // Calculate it's distance:
                     dx = xs-maskSpacePixel[0];
@@ -388,13 +425,13 @@ public class SphericalDewarper {
                       closestDistance = distance;
                     }
                   }
+                }
               searchRadius++;// Increase the search radius
             }
             perPixelLookupTable[x][y][0] = maskSpacePixel[0] + closestPixel[0];
             perPixelLookupTable[x][y][1] = maskSpacePixel[1] + closestPixel[1];
           }
         }
-        //System.out.print("done!");
       }
 
       // Use lookup table to draw dewarped image
