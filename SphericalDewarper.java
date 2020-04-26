@@ -109,8 +109,9 @@ public class SphericalDewarper {
       @Override
       public void doSomethingWithImage(BufferedImage img)
       {
-        // TODO: Add the mask image, enable disable button
+        System.out.print("Generating mask outline... ");
         sampleImageDisplay.imageContainer.setNNmaskImage(img);
+        System.out.println("done!");
         enableNNmaskBtn.setEnabled(true);
         enableNNmaskBtn.setSelected(true);
       }

@@ -102,6 +102,9 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
     }
     private BufferedImage generateOutline(BufferedImage img, Color c)
     {
+      // Note: Now this method uses img.getRGB(x,y)&0xff to get the value of the color
+      // instead of (new Color(img.getRGB(x,y))).getRed() in an effort to save on RAM
+      // (and hopefully cycles)
       int width = img.getWidth();
       int height = img.getHeight();
       BufferedImage disp = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
@@ -109,13 +112,13 @@ public class SampleImageConfigurator extends JFrame implements ActionListener {
         for(int y = 0; y < height; y++)
         {
           boolean blackNear = false;
-          if(new Color(img.getRGB(x,y)).getRed() >= 128)
+          if((img.getRGB(x,y)&0xff) >= 128)
             for(int i = Math.max(0,x-1); i<=Math.min(width-1,x+1); i++)
               for(int o = Math.max(0,y-1); o<=Math.min(height-1, y+1); o++)
               {
                 if(i == x && o == y)
                   continue;
-                if(new Color(img.getRGB(i,o)).getRed() < 128)
+                if((img.getRGB(i,o)&0xff) < 128)
                   blackNear = true;
               }
           if(blackNear)
