@@ -41,7 +41,7 @@ public class SphericalDewarper {
     public abstract void doSomethingWithImage(BufferedImage img);
   }
 
-  public static String VERSION = "1.1.3";
+  public static String VERSION = "1.2.0";
 
   public static Integer horizontalResolution = 550;
   public static Integer verticalResolution = 400;
