@@ -8,6 +8,10 @@ At the moment the project is just raw java files, so to run you must first clone
 After this compile all the appropriate java files by running `javac *.java`, the program can then be run with `java SphericalDewarper`.
 
 ### Versioning Convention
+The current version is `1.2.0`.
+
 Versioning in the format `Major.minor.bugfix`, where `Major` is the major version - incremented when a major milestone update is
 perfomed and backwards-compatability is no longer guaranteed, the `minor` version increments as individual features are implemented,
 and `bugfix` increments as bugs in that version are fixed.
+
+Basic notes on revisions can be found in `revisions.log`, further notes can be found in commit messages.
