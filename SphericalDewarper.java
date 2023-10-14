@@ -41,15 +41,19 @@ public class SphericalDewarper {
     public abstract void doSomethingWithImage(BufferedImage img);
   }
 
-  public static String VERSION = "1.2.0";
+  public static String VERSION = "1.3.0";
 
-  public static Integer horizontalResolution = 550;
-  public static Integer verticalResolution = 400;
+  public static Integer horizontalPanoramicResolution = 550;
+  public static Integer verticalPanoramicResolution = 400;
+  public static Integer horizontalTopDownResolution = 400;
+  public static Integer verticalTopDownResolution = 400;
+  public static Double topDownMmPerPixel = 1.0;
   public static Double vertAngleStart = 0.0;
   public static Double vertAngleEnd = 60.0;
 
   public static SampleImageConfigurator sampleImageDisplay = new SampleImageConfigurator();
-  public static SampleOutputDisplay sampleOutput = new SampleOutputDisplay(horizontalResolution, verticalResolution);
+  public static SampleOutputDisplay samplePanoramicOutput = new SampleOutputDisplay(horizontalPanoramicResolution, verticalPanoramicResolution, "Panoramic");
+  public static SampleOutputDisplay sampleTopDownOutput = new SampleOutputDisplay(horizontalTopDownResolution, verticalTopDownResolution, "Top-Down");
   public static JFrame configFrame = new JFrame();
 
   public static double[] perPixelAngles; // Stores the angle from horizontal at each vertical step
@@ -225,21 +229,21 @@ public class SphericalDewarper {
     configPanel.add(anglePanel);
 
     // Add the resolution UI:
-    configPanel.add(new JLabel("Output image resultion (pixels, WxH):"));
+    configPanel.add(new JLabel("Panoramic image resolution (pixels, WxH):"));
     JPanel resPanel = new JPanel(new GridLayout(1,2));
-    JTextField hozResolutionSelector = new JTextField(horizontalResolution.toString());
-    JTextField vertResolutionSelector = new JTextField(verticalResolution.toString());
+    JTextField hozResolutionSelector = new JTextField(horizontalPanoramicResolution.toString());
+    JTextField vertResolutionSelector = new JTextField(verticalPanoramicResolution.toString());
     hozResolutionSelector.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
-        horizontalResolution = Math.max(0, Integer.parseInt(hozResolutionSelector.getText()));
-        sampleOutput.setNewImage(horizontalResolution, verticalResolution);
+        horizontalPanoramicResolution = Math.max(0, Integer.parseInt(hozResolutionSelector.getText()));
+        samplePanoramicOutput.setNewImage(horizontalPanoramicResolution, verticalPanoramicResolution);
         computeAndRenderVisualiser();
       }
     });
     vertResolutionSelector.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
-        verticalResolution = Math.max(0, Integer.parseInt(vertResolutionSelector.getText()));
-        sampleOutput.setNewImage(horizontalResolution, verticalResolution);
+        verticalPanoramicResolution = Math.max(0, Integer.parseInt(vertResolutionSelector.getText()));
+        samplePanoramicOutput.setNewImage(horizontalPanoramicResolution, verticalPanoramicResolution);
         computeAndRenderVisualiser();
       }
     });
@@ -319,9 +323,9 @@ public class SphericalDewarper {
   public static void computeSampleBounds()
   {
     // Calculate the angles
-    double[] pixelBoundaryAngles = new double[verticalResolution+1];// Stores the angles of each vertical pixel boundary
-    double scale = (vertAngleEnd - vertAngleStart)/(verticalResolution);
-    for(int i = 0; i<verticalResolution+1; i++)
+    double[] pixelBoundaryAngles = new double[verticalPanoramicResolution+1];// Stores the angles of each vertical pixel boundary
+    double scale = (vertAngleEnd - vertAngleStart)/(verticalPanoramicResolution);
+    for(int i = 0; i<verticalPanoramicResolution+1; i++)
     {
       ReflectionRegressor rr = new ReflectionRegressor(vertAngleStart + i*scale);
       pixelBoundaryAngles[i] = rr.regressAngle();
@@ -335,13 +339,13 @@ public class SphericalDewarper {
     if(ReflectionRegressor.getCameraDistance() > ReflectionRegressor.reflectorCircle.getRadius())
     {
       // Calculate the angles
-      double angles[] = new double[verticalResolution];// Stores the angle from vertical around the camera for each step
-      perPixelAngles = new double[verticalResolution];// Stores the angle from the vertical around the reflector for use in export.
-      double scale = (vertAngleEnd - vertAngleStart)/(verticalResolution);
-      for(int i = 0; i<verticalResolution; i++)
+      //double angles[] = new double[verticalPanoramicResolution];// Stores the angle from vertical around the camera for each step // TODO: I have removed this, because I don't think it's needed
+      perPixelAngles = new double[verticalPanoramicResolution];// Stores the angle from the vertical around the reflector for use in export.
+      double scale = (vertAngleEnd - vertAngleStart)/(verticalPanoramicResolution);
+      for(int i = 0; i<verticalPanoramicResolution; i++)
       {
         ReflectionRegressor rr = new ReflectionRegressor(vertAngleStart + scale/2 + i*scale);
-        angles[i] = rr.regressAngle();
+        /*angles[i] = */rr.regressAngle();
         perPixelAngles[i] = rr.outputRayAngleFromDown;
         rr.drawLines();
       }
@@ -356,12 +360,12 @@ public class SphericalDewarper {
       
       ////Use the calculated angles to sample the input image and draw to the output image
       // Calculate lookup table
-      perPixelLookupTable = new int[horizontalResolution][verticalResolution][2];// Store a map of coordinates to new coordinates
-      for(int x = 0; x<horizontalResolution; x++)
+      perPixelLookupTable = new int[horizontalPanoramicResolution][verticalPanoramicResolution][2];// Store a map of coordinates to new coordinates
+      for(int x = 0; x<horizontalPanoramicResolution; x++)
       {
-        for(int y = 0; y<verticalResolution; y++)
+        for(int y = 0; y<verticalPanoramicResolution; y++)
         {
-          Point coordinate = sampleImageDisplay.getCoordinateAt(x/(double)horizontalResolution, perPixelAngles[y]/perPixelAngles[0]);
+          Point coordinate = sampleImageDisplay.getCoordinateAt(x/(double)horizontalPanoramicResolution, perPixelAngles[y]/perPixelAngles[0]);
           perPixelLookupTable[x][y][0] = (int)coordinate.getX();
           perPixelLookupTable[x][y][1] = (int)coordinate.getY();
         }
@@ -371,8 +375,8 @@ public class SphericalDewarper {
       if(sampleImageDisplay.imageContainer.isDPmaskEnabled())
       {
         // Loop through the lookup table and update the links to the set coordinates
-        for(int x = 0; x<horizontalResolution; x++)
-          for(int y = 0; y<verticalResolution; y++)
+        for(int x = 0; x<horizontalPanoramicResolution; x++)
+          for(int y = 0; y<verticalPanoramicResolution; y++)
             if((sampleImageDisplay.imageContainer.DPmaskImage.getRGB(perPixelLookupTable[x][y][0], perPixelLookupTable[x][y][1])&0xff) < 128)
             {
               perPixelLookupTable[x][y][0] = (int)sampleImageDisplay.imageContainer.directLinkReticule.getX();
@@ -387,9 +391,9 @@ public class SphericalDewarper {
       {
         // Search to find the neareset non-mask pixel at each pixel
         // (The start pixel itself will, by default be the closest non-mask pixel):
-        for(int x = 0; x<horizontalResolution; x++)
+        for(int x = 0; x<horizontalPanoramicResolution; x++)
         {
-          for(int y = 0; y<verticalResolution; y++)
+          for(int y = 0; y<verticalPanoramicResolution; y++)
           {
             // Expand the search radius until it completely encloses the
             // circle formed taking the radius from the current closest point
@@ -438,15 +442,15 @@ public class SphericalDewarper {
       // TODO: Probably shouldn't reference the images like this, instead should make getters and setters
       // (and put the subclasses and ImageContainer instances back to being private)
       if (sampleImageDisplay.imageContainer.image != null)
-        for(int x = 0; x<horizontalResolution; x++)
+        for(int x = 0; x<horizontalPanoramicResolution; x++)
         {
-          for(int y = 0; y<verticalResolution; y++)
+          for(int y = 0; y<verticalPanoramicResolution; y++)
           {
             //System.out.println("(" + x + ", " + y + ")  -  (" + perPixelLookupTable[x][y][0] + ", " + perPixelLookupTable[x][y][1] + ")");
-            sampleOutput.imageContainer.image.setRGB(x, y, sampleImageDisplay.imageContainer.image.getRGB(perPixelLookupTable[x][y][0], perPixelLookupTable[x][y][1]));
+            samplePanoramicOutput.imageContainer.image.setRGB(x, y, sampleImageDisplay.imageContainer.image.getRGB(perPixelLookupTable[x][y][0], perPixelLookupTable[x][y][1]));
           }
         }
-      sampleOutput.imageContainer.repaint();
+      samplePanoramicOutput.imageContainer.repaint();
     }
   }
 
@@ -461,8 +465,8 @@ public class SphericalDewarper {
                          "File Version: " + VERSION,
                          "Intended Input Image Width: " + sampleImageDisplay.imageContainer.image.getWidth(),
                          "Intended Input Image Height: " + sampleImageDisplay.imageContainer.image.getHeight(),
-                         "Output Image Width: " + horizontalResolution,
-                         "Output Image Height: " + verticalResolution};
+                         "Output Panoramic Image Width: " + horizontalPanoramicResolution,
+                         "Output Panoramic Image Height: " + verticalPanoramicResolution};
 
     // Export the file:
     if(filetype.equals("py"))

@@ -41,6 +41,7 @@ public class ReflectionRegressor {
     env.entities.add(reflectorCircle);
     env.entities.add(camCircle);
   }
+  /* Set the camera distance from the reflector (in millimeters) */
   public static void setCameraDistance(double distance)
   {
     distance *= SCALE_MULT;

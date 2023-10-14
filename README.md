@@ -3,6 +3,15 @@ A tool that generates dewarping lookup tables for a configured spherical reflect
 
 More detailed usage instructions will be coming soon, for now please refer to the [ShefBots PiWars blog post](https://shefbots.github.io/vision/camera/2020/03/16/making-round-images-flat-and-flat-images-round.html) about it.
 
+### Usage
+This tool assumes that a spherical reflector (usually a ball-bearing) is suspended above an upward-facing camera, then generates a lookup table in a choosen language that can take an image from the upward-facing camera and convert it to a panoramic image from the perspective of the ball bearing.
+
+#### Tool Usage
+TODO: Explain what each bit of the UI actually does
+
+#### Generated Code API
+TODO: Explain how to use the generated code (probably with a python example
+
 ### Compilation and Running
 At the moment the project is just raw java files, so to run you must first clone the repository (make sure to download the submodulealong with it).
 After this compile all the appropriate java files by running `javac *.java`, the program can then be run with `java SphericalDewarper`.
