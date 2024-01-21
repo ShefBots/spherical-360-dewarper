@@ -50,6 +50,7 @@ public class SphericalDewarper {
   public static Double topDownMmPerPixel = 1.0;
   public static Double vertAngleStart = 0.0;
   public static Double vertAngleEnd = 60.0;
+  //public static Double heightFromGround = 150; // How high the ball bearing is above the ground
 
   public static SampleImageConfigurator sampleImageDisplay = new SampleImageConfigurator();
   public static SampleOutputDisplay samplePanoramicOutput = new SampleOutputDisplay(horizontalPanoramicResolution, verticalPanoramicResolution, "Panoramic");
@@ -58,6 +59,7 @@ public class SphericalDewarper {
 
   public static double[] perPixelAngles; // Stores the angle from horizontal at each vertical step
   public static int[][][] perPixelLookupTable; // Stores a map of each coordinate to a new coordinate (in the form [width][height][x,y])
+  public static int[][][] topDownLookupTable; // Stores a map of each coordinate to a new coordinate, top-down mode.
   //public static int[][][][] perPixelSpreadLookupTable; // Stores a collection of coordinates for each pixel in the output from that in the input (in the form [width][height][xs][ys]) TODO.
 
   public static void main(String[] args) throws InterruptedException
@@ -108,6 +110,7 @@ public class SphericalDewarper {
         computeAndRenderVisualiser();
       }
     });
+    
     // Load Mask Option
     JButton loadNNmaskBtn = new JButton("Load Mask");
     loadNNmaskBtn.addActionListener(new ImageLoader(){
@@ -228,7 +231,19 @@ public class SphericalDewarper {
     anglePanel.add(endAngleSelector);
     configPanel.add(anglePanel);
 
-    // Add the resolution UI:
+    // Add the height from ground UI
+    configPanel.add(new JLabel("Reflector center above ground (mm):"));
+    JTextField heightFromGroundSelector = new JTextField(ReflectionRegressor.DEFAULT_HEIGHT_TO_GROUND.toString());
+    heightFromGroundSelector.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        ReflectionRegressor.ballHeightAboveGround = Double.parseDouble(heightFromGroundSelector.getText());
+        System.out.println("Reflector height above ground set to " + ReflectionRegressor.ballHeightAboveGround + "mm");
+        computeAndRenderVisualiser();
+      }
+    });
+    configPanel.add(heightFromGroundSelector);
+
+    // Add the panoramic resolution UI:
     configPanel.add(new JLabel("Panoramic image resolution (pixels, WxH):"));
     JPanel resPanel = new JPanel(new GridLayout(1,2));
     JTextField hozResolutionSelector = new JTextField(horizontalPanoramicResolution.toString());
@@ -250,6 +265,29 @@ public class SphericalDewarper {
     resPanel.add(hozResolutionSelector);
     resPanel.add(vertResolutionSelector);
     configPanel.add(resPanel);
+
+    // Add the top-down resolution UI
+    configPanel.add(new JLabel("Topdown image resolution (pixels, WxH):"));
+    JPanel tdResPanel = new JPanel(new GridLayout(1,2));
+    JTextField tdHozResolutionSelector = new JTextField(horizontalTopDownResolution.toString());
+    JTextField tdVertResolutionSelector = new JTextField(verticalTopDownResolution.toString());
+    tdHozResolutionSelector.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        horizontalTopDownResolution = Math.max(0, Integer.parseInt(tdHozResolutionSelector.getText()));
+        sampleTopDownOutput.setNewImage(horizontalPanoramicResolution, verticalPanoramicResolution);
+        computeAndRenderVisualiser();
+      }
+    });
+    tdVertResolutionSelector.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        verticalTopDownResolution = Math.max(0, Integer.parseInt(tdVertResolutionSelector.getText()));
+        sampleTopDownOutput.setNewImage(horizontalPanoramicResolution, verticalPanoramicResolution);
+        computeAndRenderVisualiser();
+      }
+    });
+    tdResPanel.add(tdHozResolutionSelector);
+    tdResPanel.add(tdVertResolutionSelector);
+    configPanel.add(tdResPanel);
 
     // Add the file loader UI:
     JButton loadFileBtn = new JButton("Load Sample Image");
@@ -351,12 +389,12 @@ public class SphericalDewarper {
       }
 
       // Also draw the start and end angles
-      ReflectionRegressor rr = new ReflectionRegressor(vertAngleStart);
-      rr.regressAngle();
-      rr.drawLines(Color.BLACK, false);
-      rr = new ReflectionRegressor(vertAngleEnd);
-      rr.regressAngle();
-      rr.drawLines(Color.BLACK, false);
+      ReflectionRegressor rrgui = new ReflectionRegressor(vertAngleStart);
+      rrgui.regressAngle();
+      rrgui.drawLines(Color.BLACK, false);
+      rrgui = new ReflectionRegressor(vertAngleEnd);
+      rrgui.regressAngle();
+      rrgui.drawLines(Color.BLACK, false);
       
       ////Use the calculated angles to sample the input image and draw to the output image
       // Calculate lookup table
@@ -368,6 +406,19 @@ public class SphericalDewarper {
           Point coordinate = sampleImageDisplay.getCoordinateAt(x/(double)horizontalPanoramicResolution, perPixelAngles[y]/perPixelAngles[0]);
           perPixelLookupTable[x][y][0] = (int)coordinate.getX();
           perPixelLookupTable[x][y][1] = (int)coordinate.getY();
+        }
+      }
+
+      // Calculate the top-down lookup table
+      topDownLookupTable = new int[horizontalTopDownResolution][verticalTopDownResolution][2];
+      for(int x = 0; x<horizontalTopDownResolution; x++)
+      {
+        for(int y = 0; y<verticalTopDownResolution; y++)
+        {
+          ReflectionRegressor rr = new ReflectionRegressor();
+          double targetDistance = Math.sqrt(Math.pow(x+0.5, 2) + Math.pow(y+0.5, 2));
+          rr.setTargetFloorDistance(targetDistance);
+          rr.regressFloorAngle();
         }
       }
 
@@ -385,7 +436,7 @@ public class SphericalDewarper {
       }
 
       // Alter the lookup table to account for the nearest-neighbour mask
-      // TODO: (Also see below) NNmaskImage is public within ImageContainer, and referenced here - this hould probably be changed.
+      // TODO: (Also see below) NNmaskImage is public within ImageContainer, and referenced here - this should probably be changed.
       // TODO: I also hate the horrifically nested code below, but this seems like the most efficient way to do it.
       if(sampleImageDisplay.imageContainer.isNNmaskEnabled())
       {

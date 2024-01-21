@@ -5,6 +5,19 @@ import blayzeTechUtils.graphics.SimpleDisplay;
 import java.awt.Color;
 import java.awt.Graphics2D;
 
+
+/**
+  *  Note to anyone reading this code: You may be wondering why it works this way.
+  *  Me too. I wrote this four years ago and I'm still not sure why I did it this way.
+  *  For some reason I was in the headspace of "yeah, we'll just make an object that
+  *  stores all of the things statically and then instances of that will perform 
+  *  the actual computation" - including the inputs of target angle/distance for some
+  *  reason. I wanted to change it, but really that'd take more effort than it's worth
+  *  so I just decided to go along with it when updating this for PiWars 2024.
+  *
+  *  - Blayze
+  */
+
 public class ReflectionRegressor {
 
   public static SimpleDisplay d = new SimpleDisplay(400,600, "Reflection Regressor", true, true);
@@ -17,6 +30,7 @@ public class ReflectionRegressor {
 
   public static final Double DEFAULT_CAMERA_DISTANCE = 30.0;
   public static final Double DEFAULT_REFLECTOR_RADIUS = 10.0;
+  public static final Double DEFAULT_HEIGHT_TO_GROUND = 150.0;
   public static NVector offset = new NVector(new double[]{100,100});
   
   // Store the environment:
@@ -24,6 +38,7 @@ public class ReflectionRegressor {
   public static CircleBoundedEntity camCircle;
   public static CircleBoundedEntity reflectorCircle;
   public static NVector DOWN = new NVector(new double[]{0,1});
+  public static double ballHeightAboveGround = DEFAULT_HEIGHT_TO_GROUND;
 
 
   private NVector targetSlope;
@@ -31,6 +46,7 @@ public class ReflectionRegressor {
   private NVector reflectedRay = new NVector(new double[]{0,0});
   public double angle = 0;// Gets camera angle set by the regressor (stored here in case it gets needed somewhere else)
   public double outputRayAngleFromDown = 0; // Stores the angle from the down vector to the output ray
+  public double targetDistance = 0; // Stores the target distance when doing a distance-based solution
 
   static{
     // Man look at this strange static-class programming.
@@ -60,6 +76,10 @@ public class ReflectionRegressor {
     d.repaint();
   }
 
+  public ReflectionRegressor()
+  {
+    // Do nothing here on this one
+  }
   public ReflectionRegressor(double targetAngle)
   {
     setTargetAngle(targetAngle);
@@ -81,10 +101,18 @@ public class ReflectionRegressor {
     d.repaint();
   }
 
+  public void setTargetAngleRads(double rads)
+  {
+    targetSlope = new NVector(new double[]{Math.cos(rads), Math.sin(rads)});
+  }
   public void setTargetAngle(double angleDegs)
   {
     double rads = angleDegs/180 * Math.PI;
-    targetSlope = new NVector(new double[]{Math.cos(rads), Math.sin(rads)});
+    setTargetAngleRads(rads);
+  }
+  public void setTargetFloorDistance(double dist)
+  {
+    targetDistance = dist;
   }
   public double regressAngle()
   {
@@ -134,5 +162,15 @@ public class ReflectionRegressor {
     this.angle = angle;
     this.outputRayAngleFromDown = Math.acos(reflectedRay.dot(DOWN));
     return angle;
+  }
+  public double regressFloorAngle()
+  {
+    NVector cameraV = new NVector(new double[]{camCircle.getX(), camCircle.getY()});
+    double maximumRange = Math.asin(reflectorCircle.getRadius()/(camCircle.getY()-reflectorCircle.getY()));
+    double angularStep = maximumRange/STEPS;
+
+    // ... do more stuff based on the target distance
+
+    return angle; 
   }
 }

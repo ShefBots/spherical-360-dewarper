@@ -36,6 +36,7 @@ public class SampleOutputDisplay extends JFrame {
   public ImageContainer imageContainer;
 
   public SampleOutputDisplay(int width, int height, String type)
+  {
     super();
     setTitle("Sample Output: " + type);
     setDefaultCloseOperation(EXIT_ON_CLOSE);
