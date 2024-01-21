@@ -421,12 +421,14 @@ public class SphericalDewarper {
 
       // Calculate the top-down lookup table
       topDownLookupTable = new int[horizontalTopDownResolution][verticalTopDownResolution][2];
+      double centerX = (horizontalTopDownResolution*topDownMmPerPixel)/2;
+      double centerY = (verticalTopDownResolution*topDownMmPerPixel)/2;
       for(int x = 0; x<horizontalTopDownResolution; x++)
       {
         for(int y = 0; y<verticalTopDownResolution; y++)
         {
           ReflectionRegressor rr = new ReflectionRegressor();
-          double targetDistance = Math.sqrt(Math.pow(x+0.5, 2) + Math.pow(y+0.5, 2));
+          double targetDistance = Math.sqrt(Math.pow(x+0.5-centerX, 2) + Math.pow(y+0.5-centerY, 2));
           rr.setTargetFloorDistance(targetDistance);
           rr.regressFloorAngle();
         }
