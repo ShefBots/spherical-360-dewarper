@@ -243,6 +243,16 @@ public class SphericalDewarper {
     });
     configPanel.add(heightFromGroundSelector);
 
+    configPanel.add(new JLabel("Topdown mm/pixel:"));
+    JTextField mmPerPixelSelector = new JTextField(topDownMmPerPixel.toString());
+    mmPerPixelSelector.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        topDownMmPerPixel = Double.parseDouble(mmPerPixelSelector.getText());
+        computeAndRenderVisualiser();
+      }
+    });
+    configPanel.add(mmPerPixelSelector);
+
     // Add the panoramic resolution UI:
     configPanel.add(new JLabel("Panoramic image resolution (pixels, WxH):"));
     JPanel resPanel = new JPanel(new GridLayout(1,2));
