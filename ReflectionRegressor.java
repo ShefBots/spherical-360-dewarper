@@ -37,6 +37,7 @@ public class ReflectionRegressor {
   public static Environment env = new Environment();
   public static CircleBoundedEntity camCircle;
   public static CircleBoundedEntity reflectorCircle;
+  public static InfinitePlaneEntity floor;
   public static NVector DOWN = new NVector(new double[]{0,1});
   public static double ballHeightAboveGround = DEFAULT_HEIGHT_TO_GROUND;
 
@@ -51,11 +52,13 @@ public class ReflectionRegressor {
   static{
     // Man look at this strange static-class programming.
     // preconfig with arbitary positions:
-    camCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1) + DEFAULT_CAMERA_DISTANCE, 4);
+    camCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1) + DEFAULT_CAMERA_DISTANCE * SCALE_MULT, 4);
     reflectorCircle = new CircleBoundedEntity(offset.getElement(0), offset.getElement(1), DEFAULT_REFLECTOR_RADIUS * SCALE_MULT);
+    floor = new InfinitePlaneEntity(offset.getX(), offset.getY() + DEFAULT_HEIGHT_TO_GROUND, 0, true);
     setCameraDistance(DEFAULT_CAMERA_DISTANCE);
     env.entities.add(reflectorCircle);
     env.entities.add(camCircle);
+    env.entities.add(floor);
   }
   /* Set the camera distance from the reflector (in millimeters) */
   public static void setCameraDistance(double distance)
@@ -66,6 +69,10 @@ public class ReflectionRegressor {
   public static double getCameraDistance()
   {
     return(Math.abs(camCircle.getY() - reflectorCircle.getY()));
+  }
+  public static void setFloorDistance(double distance)
+  {
+    floor.setY(reflectorCircle.getY() + Math.max(0, distance));
   }
   public static void drawEnvironment()
   {
@@ -116,6 +123,10 @@ public class ReflectionRegressor {
   }
   public double regressAngle()
   {
+    return regressAngle(false);
+  }
+  public double regressAngle(boolean regressAgainstFloorDistance)
+  {
     NVector cameraV = new NVector(new double[]{camCircle.getX(), camCircle.getY()});
     double maximumRange = Math.asin(reflectorCircle.getRadius()/(camCircle.getY()-reflectorCircle.getY()));
     double angularStep = maximumRange/STEPS;
@@ -141,12 +152,31 @@ public class ReflectionRegressor {
         angularStep *= STEP_DOWNSCALE;
         continue;
       }
-      // TODO: Actually use the correct heuristic.
-      double yError = reflectedRay.getElement(1) - targetSlope.getElement(1);
-      double xError = reflectedRay.getElement(0) - targetSlope.getElement(0);
-      //double error = targetSlope.crossProduct(reflectedRay);//xError + yError;
-      //double error = reflectedRay.getElement(1)*targetSlope.getElement(0) - reflectedRay.getElement(0)*reflectedRay.getElement(1);
-      double error = yError;
+
+      double error;
+
+      // Depending on what we're regressing against (angle or floor distance) set the error:
+      if(!regressAgainstFloorDistance)
+      {
+        ///// Here we're regressing against the target angle
+        // TODO: Actually use the correct heuristic.
+        double yError = reflectedRay.getY() - targetSlope.getElement(1);
+        double xError = reflectedRay.getX() - targetSlope.getElement(0);
+        //double error = targetSlope.crossProduct(reflectedRay);//xError + yError;
+        //double error = reflectedRay.getElement(1)*targetSlope.getElement(0) - reflectedRay.getElement(0)*reflectedRay.getElement(1);
+        error = yError;
+      }else{
+        //// Here we're regeressing against the target on-floor distance
+        // Now the hit's made contact, we need to cast another reflected ray out from the contact point
+
+        // Create the new ray, send it into the environment
+        NVector newReflectedRay = reflectedRay.normalize().scale(RAY_LEN);
+        Point newEndPoint = new Point(camCircle.getX() + newReflectedRay.getX(), camCircle.getY() + newReflectedRay.getY());
+        Hit secondRayHit = env.hitScan(camCircle,newEndPoint,(AbstractEntity)camCircle);
+
+        error = Math.abs(camCircle.getX() - secondRayHit.getX());
+      }
+
       //System.out.println("y error: " + yError);
       //System.out.println("error: " + error);
       int errorSign = (int)Math.signum(error); // Really, we only care about the vertical error.
@@ -163,14 +193,21 @@ public class ReflectionRegressor {
     this.outputRayAngleFromDown = Math.acos(reflectedRay.dot(DOWN));
     return angle;
   }
-  public double regressFloorAngle()
-  {
-    NVector cameraV = new NVector(new double[]{camCircle.getX(), camCircle.getY()});
-    double maximumRange = Math.asin(reflectorCircle.getRadius()/(camCircle.getY()-reflectorCircle.getY()));
-    double angularStep = maximumRange/STEPS;
+  //public double regressFloorAngle()
+  //{
+  //  NVector cameraV = new NVector(new double[]{camCircle.getX(), camCircle.getY()});
+  //  double maximumRange = Math.asin(reflectorCircle.getRadius()/(camCircle.getY()-reflectorCircle.getY()));
+  //  double angularStep = maximumRange/STEPS;
 
-    // ... do more stuff based on the target distance
+  //  // ... do more stuff based on the target distance
+  //  
+  //  int iterations = 0;
+  //  double angle = 0.0;
+  //  int lastSign = 1;
+  //  do
+  //  {
+  //    NVector ray = new NVector(new double
 
-    return angle; 
-  }
+  //  return angle; 
+  //}
 }

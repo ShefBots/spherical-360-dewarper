@@ -430,7 +430,13 @@ public class SphericalDewarper {
           ReflectionRegressor rr = new ReflectionRegressor();
           double targetDistance = Math.sqrt(Math.pow(x+0.5-centerX, 2) + Math.pow(y+0.5-centerY, 2));
           rr.setTargetFloorDistance(targetDistance);
-          rr.regressFloorAngle();
+          rr.regressAngle(true);
+
+          Point coordinate = sampleImageDisplay.getCoordinateAt(Math.atan2(x+0.5-centerX, y+0.5-centerY),
+                                                                rr.outputRayAngleFromDown
+                                                               );
+          topDownLookupTable[x][y][0] = (int)coordinate.getX();
+          topDownLookupTable[x][y][0] = (int)coordinate.getY();
         }
       }
 
